@@ -11,6 +11,11 @@ import {
   aggregateOrders,
   type OrderAggregation,
 } from "./aggregateOrders";
+import {
+  clearStoredOrdersImport,
+  loadOrdersImport,
+  saveOrdersImport,
+} from "./storage";
 
 export type OrdersImport = {
   fileName: string;
@@ -41,7 +46,9 @@ type ImportContextValue = {
 const ImportContext = createContext<ImportContextValue | null>(null);
 
 export function ImportProvider({ children }: { children: ReactNode }) {
-  const [ordersImport, setOrdersImport] = useState<OrdersImport | null>(null);
+  const [ordersImport, setOrdersImport] = useState<OrdersImport | null>(() =>
+    loadOrdersImport(),
+  );
   const [lastFailure, setLastFailure] = useState<FailedImport | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
@@ -52,7 +59,8 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         const parseResult = await parseOrdersCsv(file);
         // Treat any parse-level error (missing required column, empty CSV, etc.)
         // as a failed import — do NOT overwrite a previously successful import,
-        // and do NOT publish zero-aggregation values to the dashboard.
+        // do NOT publish zero-aggregation values to the dashboard, and do NOT
+        // persist the failure to localStorage.
         if (parseResult.errors.length > 0) {
           const failure: FailedImport = {
             fileName: file.name,
@@ -72,6 +80,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
         };
         setOrdersImport(next);
         setLastFailure(null);
+        saveOrdersImport(next);
         return { kind: "success", import: next };
       } finally {
         setIsImporting(false);
@@ -83,6 +92,7 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   const clearOrdersImport = useCallback(() => {
     setOrdersImport(null);
     setLastFailure(null);
+    clearStoredOrdersImport();
   }, []);
 
   const dismissFailure = useCallback(() => {

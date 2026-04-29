@@ -16,6 +16,7 @@ import {
   Box,
   XCircle,
   RefreshCw,
+  ShieldCheck,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import SectionCard from "../components/ui/SectionCard";
@@ -123,6 +124,11 @@ export default function DataImport() {
       />
 
       <div className="space-y-5 px-6 py-5">
+        <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-1.5 text-[11px] text-slate-600">
+          <ShieldCheck size={12} className="text-emerald-600" />
+          メモリ／ブラウザ保存のみ。外部送信なし。
+        </div>
+
         {/* Connection summary */}
         <SectionCard title="データ接続サマリー" icon={<Database size={16} />}>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">

@@ -357,22 +357,46 @@ export default function Dashboard() {
         <SectionCard title="データ連携状態" icon={<Database size={16} />}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {[
-              { name: "Shopify注文CSV", state: "取込済", when: "最終: 4/30 08:30", tone: "mint" },
-              { name: "商品CSV", state: "取込済", when: "最終: 4/30 08:30", tone: "mint" },
-              { name: "広告CSV", state: "取込済", when: "最終: 4/30 08:30", tone: "mint" },
-              { name: "GA4 CSV", state: "任意・未取込", when: "未取込", tone: "gold" },
-              { name: "Shopify API", state: "任意・未接続", when: "未接続", tone: "gold" },
+              ordersImport
+                ? {
+                    name: "Shopify注文CSV",
+                    state: "取込済",
+                    when: `${ordersImport.importedAt.toLocaleString("ja-JP")} / ${ordersImport.parseResult.acceptedRows.toLocaleString("ja-JP")}件`,
+                    detail: ordersImport.fileName,
+                    tone: "mint" as const,
+                  }
+                : {
+                    name: "Shopify注文CSV",
+                    state: "未取込",
+                    when: "未取込",
+                    detail: undefined,
+                    tone: "gold" as const,
+                  },
+              { name: "商品CSV", state: "取込済", when: "最終: 4/30 08:30", detail: undefined, tone: "mint" as const },
+              { name: "広告CSV", state: "取込済", when: "最終: 4/30 08:30", detail: undefined, tone: "mint" as const },
+              { name: "GA4 CSV", state: "任意・未取込", when: "未取込", detail: undefined, tone: "gold" as const },
+              { name: "Shopify API", state: "任意・未接続", when: "未接続", detail: undefined, tone: "gold" as const },
             ].map((d) => (
               <div key={d.name} className="rounded-xl border border-slate-100 p-3">
                 <div className="text-xs font-semibold text-slate-700">
                   {d.name}
                 </div>
-                <div className="mt-1.5 flex items-center justify-between">
-                  <Pill tone={d.tone as "mint" | "gold"} size="xs">
+                <div className="mt-1.5 flex items-center justify-between gap-2">
+                  <Pill tone={d.tone} size="xs">
                     {d.state}
                   </Pill>
-                  <span className="text-[10px] text-slate-400">{d.when}</span>
+                  <span className="truncate text-[10px] text-slate-400" title={d.when}>
+                    {d.when}
+                  </span>
                 </div>
+                {d.detail && (
+                  <div
+                    className="mt-1 truncate font-mono text-[10px] text-slate-500"
+                    title={d.detail}
+                  >
+                    {d.detail}
+                  </div>
+                )}
               </div>
             ))}
           </div>
