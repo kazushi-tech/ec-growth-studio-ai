@@ -7,6 +7,7 @@ import ProductPage from "./pages/ProductPage";
 import ActionBoard from "./pages/ActionBoard";
 import DataImport from "./pages/DataImport";
 import MonthlyReport from "./pages/MonthlyReport";
+import RevenueAnalysis from "./pages/RevenueAnalysis";
 import NotFound from "./pages/NotFound";
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route element={<AppLayout />}>
         <Route path="/app" element={<Dashboard />} />
+        <Route path="/app/revenue-analysis" element={<RevenueAnalysis />} />
         <Route path="/app/ai-report" element={<AiReport />} />
         <Route path="/app/product-page" element={<ProductPage />} />
         <Route path="/app/action-board" element={<ActionBoard />} />

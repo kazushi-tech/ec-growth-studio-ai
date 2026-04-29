@@ -129,6 +129,123 @@ export default function DataImport() {
           メモリ／ブラウザ保存のみ。外部送信なし。
         </div>
 
+        {/* EC linkage stance — explain that we don't host the EC site */}
+        <SectionCard title="ECサイト連携の考え方" icon={<Plug size={16} />}>
+          <div className="grid gap-3 lg:grid-cols-3">
+            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+              <div className="text-xs font-semibold text-slate-700">
+                ECサイトはお客さまが保有
+              </div>
+              <p className="mt-1 text-[11px] leading-6 text-slate-600">
+                Shopify / 楽天 / 自社カート など、お客さまが既に運用している
+                ECサイトを前提とします。当サービス側では構築・保有しません。
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+              <div className="text-xs font-semibold text-slate-700">
+                月次改善のための分析・運用レイヤー
+              </div>
+              <p className="mt-1 text-[11px] leading-6 text-slate-600">
+                注文CSV / GA4 / 広告CSV / BigQuery などを読み取り、
+                AI診断 → 人間レビュー → 施策ボード → 月次レポートへ
+                変換するレイヤーとして機能します。
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+              <div className="text-xs font-semibold text-slate-700">
+                CSV-first / API-later
+              </div>
+              <p className="mt-1 text-[11px] leading-6 text-slate-600">
+                MVPではCSV取込から開始。将来は GA4 / BigQuery / 広告API への
+                <b>読み取り専用</b>連携を順次追加します。
+                認証情報やAPIキーはまだ扱いません。
+              </p>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* GA4 / BigQuery readiness — checklist only, no actual connection */}
+        <SectionCard
+          title="GA4 / BigQuery 接続準備"
+          icon={<BarChart3 size={16} />}
+          action={
+            <Pill tone="gold" size="xs">
+              実接続は次フェーズ
+            </Pill>
+          }
+        >
+          <div className="grid gap-3 lg:grid-cols-3">
+            <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3 lg:col-span-2">
+              <div className="text-xs font-semibold text-amber-700">
+                主価値は「GA4 / BigQuery 接続」ではなく
+                「売上変動の原因分解と次アクション化」
+              </div>
+              <p className="mt-1.5 text-[11px] leading-6 text-slate-700">
+                GA4 / BigQuery は売上要因分解のための<b>入力チャネル</b>と位置づけます。
+                技術的にはすぐ接続できる前提で設計しますが、本MVPでは
+                <b> 実API接続 / OAuth / GCP認証 / BigQuery クエリ実行は実装しません</b>。
+                顧客側で揃えていただくべき項目を、下のチェックリストで可視化します。
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+              <div className="text-xs font-semibold text-slate-700">
+                将来のつなぎ先
+              </div>
+              <p className="mt-1 text-[11px] leading-6 text-slate-600">
+                Insight Studio で構築済みの BigQuery 分析基盤を、EC向けの
+                売上要因分解にそのまま接続する想定です。
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <div className="text-[11px] font-semibold text-slate-700">
+              接続前に揃えていただくもの（読み取り専用）
+            </div>
+            <ul className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              {[
+                {
+                  label: "GA4プロパティ",
+                  detail: "閲覧権限（サービスアカウント想定）",
+                },
+                {
+                  label: "BigQuery Export",
+                  detail: "GA4側で有効化が必要",
+                },
+                {
+                  label: "GCPプロジェクトID",
+                  detail: "BigQueryが属するプロジェクト",
+                },
+                {
+                  label: "BigQuery dataset",
+                  detail: "例: analytics_xxxxxxxxx",
+                },
+                {
+                  label: "権限スコープ",
+                  detail: "読み取り専用（roles/bigquery.dataViewer 想定）",
+                },
+              ].map((it) => (
+                <li
+                  key={it.label}
+                  className="rounded-xl border border-slate-100 bg-white p-3"
+                >
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
+                    <CheckCircle2 size={12} className="text-slate-400" />
+                    {it.label}
+                  </div>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-600">
+                    {it.detail}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-[11px] text-slate-500">
+              本画面では情報の可視化のみ行います。
+              認証情報・APIキー・OAuth トークンの保存は実装しません。
+            </p>
+          </div>
+        </SectionCard>
+
         {/* Connection summary */}
         <SectionCard title="データ接続サマリー" icon={<Database size={16} />}>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">

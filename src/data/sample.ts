@@ -577,3 +577,254 @@ export const monthlyStats = {
   expectedSalesLift: "+¥2,450,000",
   monthlyGoal: { current: 6, target: 12, percent: 50 },
 };
+
+// --- Revenue variance / driver decomposition ---
+// 売上 = セッション数 × CVR × AOV の構造で、前月との売上差分を要因に分解する。
+// GA4 / BigQuery の本接続前の段階で、CSVと前提値だけで「何が原因で売上が動いたか」を
+// 見せるための静的サンプル。実APIに接続したら、ここを置き換える。
+
+export type RevenueFactorKey = "sessions" | "cvr" | "aov";
+
+export type RevenueFactor = {
+  key: RevenueFactorKey;
+  label: string;
+  unit: string;
+  prevValue: string;
+  currValue: string;
+  changeLabel: string;
+  changeIntent: "positive" | "negative" | "neutral";
+  impactYen: number;
+  impactLabel: string;
+  driverNote: string;
+};
+
+export type RevenueCauseCategory =
+  | "流入"
+  | "商品ページCVR"
+  | "カート/決済"
+  | "AOV"
+  | "在庫/商品";
+
+export type RevenueCause = {
+  id: string;
+  category: RevenueCauseCategory;
+  scope: "商品" | "チャネル" | "全体";
+  target: string;
+  summary: string;
+  evidence: string;
+  impact: "高" | "中" | "低";
+};
+
+export type RevenueNextActionArea =
+  | "商品ページ"
+  | "広告"
+  | "CRM"
+  | "在庫"
+  | "オファー";
+
+export type RevenueNextAction = {
+  id: string;
+  area: RevenueNextActionArea;
+  title: string;
+  why: string;
+  expected: string;
+  effort: "高" | "中" | "低";
+  priority: "P1" | "P2";
+  sendTo: "施策ボード" | "AI考察レポート";
+};
+
+export type RevenueDataReadiness = {
+  label: string;
+  state: "取込済み" | "次フェーズ" | "将来";
+  note: string;
+};
+
+export type RevenueAnalysis = {
+  month: string;
+  prevMonth: string;
+  prevRevenue: number;
+  currRevenue: number;
+  diffYen: number;
+  diffPercent: string;
+  intent: "positive" | "negative" | "neutral";
+  primaryDriver: string;
+  headline: string;
+  factors: RevenueFactor[];
+  causes: RevenueCause[];
+  nextActions: RevenueNextAction[];
+  dataReadiness: RevenueDataReadiness[];
+};
+
+export const revenueAnalysis: RevenueAnalysis = {
+  month: "2026年4月",
+  prevMonth: "2026年3月",
+  prevRevenue: 14_150_000,
+  currRevenue: 12_400_000,
+  diffYen: -1_750_000,
+  diffPercent: "-12.4%",
+  intent: "negative",
+  primaryDriver: "CVR低下と流入減（セッション数）がほぼ同量で寄与",
+  headline:
+    "売上は前月比 -12.4%（-¥1,750,000）。商品ページCVR低下と広告流入の縮小が主因候補。AOV はわずかに改善。",
+  factors: [
+    {
+      key: "sessions",
+      label: "セッション数",
+      unit: "回",
+      prevValue: "124,300",
+      currValue: "115,600",
+      changeLabel: "-7.0%",
+      changeIntent: "negative",
+      impactYen: -990_000,
+      impactLabel: "-¥990,000",
+      driverNote: "Google広告のクリック数減と SEO流入の縮小が中心。",
+    },
+    {
+      key: "cvr",
+      label: "CVR（購入率）",
+      unit: "%",
+      prevValue: "3.05%",
+      currValue: "2.84%",
+      changeLabel: "-0.21pt（-6.9%）",
+      changeIntent: "negative",
+      impactYen: -970_000,
+      impactLabel: "-¥970,000",
+      driverNote: "商品AのFV訴求とレビュー導線が低下要因の主因候補。",
+    },
+    {
+      key: "aov",
+      label: "AOV（平均注文単価）",
+      unit: "円",
+      prevValue: "¥3,732",
+      currValue: "¥3,776",
+      changeLabel: "+1.2%",
+      changeIntent: "positive",
+      impactYen: 210_000,
+      impactLabel: "+¥210,000",
+      driverNote: "セット販売とギフト商品の比率がわずかに増加。",
+    },
+  ],
+  causes: [
+    {
+      id: "c1",
+      category: "流入",
+      scope: "チャネル",
+      target: "Google広告",
+      summary:
+        "クリック単価上昇でクリック数 -14%。広告経由セッションがそのまま縮小。",
+      evidence: "広告クリック -14% / 広告経由セッション -12%",
+      impact: "高",
+    },
+    {
+      id: "c2",
+      category: "流入",
+      scope: "チャネル",
+      target: "オーガニック検索",
+      summary: "新カテゴリ記事のインプレッションが減少傾向。",
+      evidence: "SEO流入 -6%",
+      impact: "中",
+    },
+    {
+      id: "c3",
+      category: "商品ページCVR",
+      scope: "商品",
+      target: "商品A",
+      summary:
+        "FV訴求と広告コピーの不一致でCVRが低下。レビューが下部にあり信頼形成も遅い。",
+      evidence: "商品A CVR -0.7pt / 直帰率 +5pt",
+      impact: "高",
+    },
+    {
+      id: "c4",
+      category: "カート/決済",
+      scope: "全体",
+      target: "決済導線",
+      summary:
+        "スマホでの決済離脱が増加。送料表示のタイミングが後ろ倒しの可能性。",
+      evidence: "カート → 決済完了率 -3pt（スマホ）",
+      impact: "中",
+    },
+    {
+      id: "c5",
+      category: "AOV",
+      scope: "商品",
+      target: "ギフトセット",
+      summary: "ギフト商品比率の増加で平均単価がわずかに上昇（プラス要因）。",
+      evidence: "ギフト商品比率 +2pt",
+      impact: "低",
+    },
+    {
+      id: "c6",
+      category: "在庫/商品",
+      scope: "商品",
+      target: "商品D",
+      summary: "低回転SKUへの広告露出が継続し、効率が悪い。",
+      evidence: "商品D 広告比率高 / CVR低位",
+      impact: "中",
+    },
+  ],
+  nextActions: [
+    {
+      id: "n1",
+      area: "商品ページ",
+      title: "商品A FVコピーとレビュー導線をリニューアル",
+      why: "CVR低下の主因候補を直接解消する。",
+      expected: "想定CVR +0.3〜0.5pt / 売上回復 +¥420,000",
+      effort: "中",
+      priority: "P1",
+      sendTo: "施策ボード",
+    },
+    {
+      id: "n2",
+      area: "広告",
+      title: "Google広告の予算配分を 商品B 寄りへ調整",
+      why: "ROAS安定の商品Bに予算を寄せ、流入効率を取り戻す。",
+      expected: "想定売上 +¥320,000",
+      effort: "低",
+      priority: "P1",
+      sendTo: "施策ボード",
+    },
+    {
+      id: "n3",
+      area: "CRM",
+      title: "初回購入者向け再購入シナリオの強化",
+      why: "購入頻度を底上げし、来月以降の売上安定に寄与。",
+      expected: "想定リピート率 +1.5pt",
+      effort: "中",
+      priority: "P2",
+      sendTo: "施策ボード",
+    },
+    {
+      id: "n4",
+      area: "オファー",
+      title: "送料閾値の再設計（2点購入で送料無料）",
+      why: "AOVのプラス傾向を強化し、CVR悪化分を一部相殺。",
+      expected: "想定AOV +¥80",
+      effort: "低",
+      priority: "P2",
+      sendTo: "AI考察レポート",
+    },
+  ],
+  dataReadiness: [
+    {
+      label: "注文CSV",
+      state: "取込済み",
+      note: "売上 / 注文数 / AOV を確定。商品別売上も集計済み。",
+    },
+    {
+      label: "GA4 CSV",
+      state: "次フェーズ",
+      note: "セッション数 / 流入チャネル別CVR を正確化するために必要。",
+    },
+    {
+      label: "広告CSV",
+      state: "次フェーズ",
+      note: "広告経由セッションと CVR / ROAS を切り分けるために必要。",
+    },
+    {
+      label: "BigQuery（読み取り）",
+      state: "将来",
+      note: "顧客が保有する BigQuery を読み取り専用で接続し、自動更新する想定。",
+    },
+  ],
+};

@@ -8,6 +8,7 @@ import {
   FileBarChart2,
   Crown,
   TrendingUp,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,6 +25,7 @@ type NavItem = {
 // 領域別の入口は当面ダッシュボードと施策ボードのフィルタ経由で提供する。
 const navItems: NavItem[] = [
   { label: "ダッシュボード", to: "/app", icon: LayoutDashboard, end: true },
+  { label: "売上要因分析", to: "/app/revenue-analysis", icon: Activity },
   { label: "データ取込", to: "/app/data-import", icon: Database },
   { label: "AI考察レポート", to: "/app/ai-report", icon: Sparkles },
   { label: "商品ページ改善", to: "/app/product-page", icon: FileEdit },
