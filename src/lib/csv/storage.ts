@@ -1,4 +1,4 @@
-import type { Ga4Import, OrdersImport } from "./ImportContext";
+import type { AdsImport, Ga4Import, OrdersImport } from "./ImportContext";
 import type { OrderRow, ParseResult } from "./parseOrders";
 import type { OrderAggregation, ProductSales } from "./aggregateOrders";
 import type {
@@ -11,9 +11,21 @@ import type {
   Ga4ParseResult,
   Ga4Row,
 } from "./parseGa4";
+import type {
+  AdsAggregation,
+  AdChannelStat,
+  AdCampaignStat,
+  InefficientCampaign,
+} from "./aggregateAds";
+import type {
+  AdRow,
+  AdsDetectedColumns,
+  AdsParseResult,
+} from "./parseAds";
 
 export const ORDERS_IMPORT_STORAGE_KEY = "ec-growth-studio:orders-import:v1";
 export const GA4_IMPORT_STORAGE_KEY = "ec-growth-studio:ga4-import:v1";
+export const ADS_IMPORT_STORAGE_KEY = "ec-growth-studio:ads-import:v1";
 
 function hasLocalStorage(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -284,5 +296,153 @@ function reviveGa4Aggregation(obj: unknown): Ga4Aggregation | null {
     periodEnd: toDate(obj.periodEnd),
     hasChannel: Boolean(obj.hasChannel),
     hasLandingPage: Boolean(obj.hasLandingPage),
+  };
+}
+
+// ---------- Ads ----------
+
+export function saveAdsImport(imp: AdsImport): void {
+  if (!hasLocalStorage()) return;
+  try {
+    window.localStorage.setItem(ADS_IMPORT_STORAGE_KEY, JSON.stringify(imp));
+  } catch {
+    // ignore
+  }
+}
+
+export function clearStoredAdsImport(): void {
+  if (!hasLocalStorage()) return;
+  try {
+    window.localStorage.removeItem(ADS_IMPORT_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export function loadAdsImport(): AdsImport | null {
+  if (!hasLocalStorage()) return null;
+  let raw: string | null;
+  try {
+    raw = window.localStorage.getItem(ADS_IMPORT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+  if (!raw) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  return reviveAdsImport(parsed);
+}
+
+function reviveAdsImport(obj: unknown): AdsImport | null {
+  if (!isObject(obj)) return null;
+  if (typeof obj.fileName !== "string") return null;
+  const importedAt = toDate(obj.importedAt);
+  if (!importedAt) return null;
+  const parseResult = reviveAdsParseResult(obj.parseResult);
+  const aggregation = reviveAdsAggregation(obj.aggregation);
+  if (!parseResult || !aggregation) return null;
+  return {
+    fileName: obj.fileName,
+    importedAt,
+    parseResult,
+    aggregation,
+  };
+}
+
+function reviveAdRow(obj: unknown): AdRow | null {
+  if (!isObject(obj)) return null;
+  const date = toDate(obj.date);
+  if (!date) return null;
+  const cost = Number(obj.cost ?? 0);
+  if (!Number.isFinite(cost)) return null;
+  const campaign = String(obj.campaign ?? "");
+  const channel = String(obj.channel ?? "");
+  if (!campaign || !channel) return null;
+  return {
+    campaign,
+    channel,
+    date,
+    cost,
+    impressions: toNumOrNull(obj.impressions),
+    clicks: toNumOrNull(obj.clicks),
+    conversions: toNumOrNull(obj.conversions),
+    revenue: toNumOrNull(obj.revenue),
+    product_name: toStrOrNull(obj.product_name),
+  };
+}
+
+function reviveAdsParseResult(obj: unknown): AdsParseResult | null {
+  if (!isObject(obj)) return null;
+  const rawRows = Array.isArray(obj.rows) ? obj.rows : [];
+  const rows: AdRow[] = [];
+  for (const r of rawRows) {
+    const row = reviveAdRow(r);
+    if (!row) return null;
+    rows.push(row);
+  }
+  const detected = isObject(obj.detectedColumns)
+    ? (obj.detectedColumns as AdsDetectedColumns)
+    : ({
+        campaign: null,
+        channel: null,
+        date: null,
+        cost: null,
+        impressions: null,
+        clicks: null,
+        conversions: null,
+        revenue: null,
+        product_name: null,
+      } as AdsDetectedColumns);
+  return {
+    rows,
+    warnings: Array.isArray(obj.warnings)
+      ? (obj.warnings as AdsParseResult["warnings"])
+      : [],
+    errors: Array.isArray(obj.errors)
+      ? (obj.errors as AdsParseResult["errors"])
+      : [],
+    totalRows: Number(obj.totalRows ?? 0),
+    acceptedRows: Number(obj.acceptedRows ?? rows.length),
+    detectedColumns: detected,
+  };
+}
+
+function reviveAdsAggregation(obj: unknown): AdsAggregation | null {
+  if (!isObject(obj)) return null;
+  const topChannels: AdChannelStat[] = Array.isArray(obj.topChannels)
+    ? (obj.topChannels as AdChannelStat[])
+    : [];
+  const topCampaigns: AdCampaignStat[] = Array.isArray(obj.topCampaigns)
+    ? (obj.topCampaigns as AdCampaignStat[])
+    : [];
+  const inefficientCampaigns: InefficientCampaign[] = Array.isArray(
+    obj.inefficientCampaigns,
+  )
+    ? (obj.inefficientCampaigns as InefficientCampaign[])
+    : [];
+  return {
+    totalCost: Number(obj.totalCost ?? 0),
+    totalImpressions: Number(obj.totalImpressions ?? 0),
+    totalClicks: Number(obj.totalClicks ?? 0),
+    totalConversions: Number(obj.totalConversions ?? 0),
+    totalRevenue: Number(obj.totalRevenue ?? 0),
+    cpc: toNumOrNull(obj.cpc),
+    ctr: toNumOrNull(obj.ctr),
+    cvr: toNumOrNull(obj.cvr),
+    roas: toNumOrNull(obj.roas),
+    topChannels,
+    topCampaigns,
+    inefficientCampaigns,
+    periodStart: toDate(obj.periodStart),
+    periodEnd: toDate(obj.periodEnd),
+    hasImpressions: Boolean(obj.hasImpressions),
+    hasClicks: Boolean(obj.hasClicks),
+    hasConversions: Boolean(obj.hasConversions),
+    hasRevenue: Boolean(obj.hasRevenue),
+    hasProduct: Boolean(obj.hasProduct),
   };
 }

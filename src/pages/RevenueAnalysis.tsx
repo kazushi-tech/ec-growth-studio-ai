@@ -15,6 +15,7 @@ import {
   ArrowRight,
   ChevronRight,
   BarChart3,
+  Megaphone,
   type LucideIcon,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
@@ -36,6 +37,11 @@ import {
 import { useImport } from "../lib/csv/ImportContext";
 import type { Ga4Aggregation } from "../lib/csv/aggregateGa4";
 import type { OrderAggregation } from "../lib/csv/aggregateOrders";
+import {
+  formatRoas,
+  formatCpc,
+  type AdsAggregation,
+} from "../lib/csv/aggregateAds";
 
 const factorIcon: Record<RevenueFactorKey, LucideIcon> = {
   sessions: MousePointer,
@@ -314,6 +320,7 @@ function adjustReadiness(
   base: RevenueDataReadiness[],
   ga4Connected: boolean,
   ordersConnected: boolean,
+  adsConnected: boolean,
 ): RevenueDataReadiness[] {
   return base.map((d) => {
     if (d.label.includes("GA4") && ga4Connected) {
@@ -330,8 +337,153 @@ function adjustReadiness(
         note: "注文CSV を取込済み。売上 / 注文数 / AOV を実値で確定。",
       };
     }
+    if (d.label.includes("広告") && adsConnected) {
+      return {
+        ...d,
+        state: "取込済み",
+        note: "広告CSV を取込済み。チャネル別 ROAS / CPC / CVR を実値で反映中。",
+      };
+    }
     return d;
   });
+}
+
+// 広告CSVが取り込まれている時に動的に追加する原因候補。
+// ROASあり: 全体平均ROASを下回るチャネル/キャンペーンを「広告効率悪化」として追加
+// 取り込まれた効率悪化キャンペーンも反映
+function buildAdsCauses(ads: AdsAggregation): RevenueCause[] {
+  const out: RevenueCause[] = [];
+
+  if (ads.totalCost <= 0) return out;
+
+  // チャネル別の効率変動（最も ROAS が低いチャネル）
+  if (ads.hasRevenue && ads.roas !== null) {
+    const sorted = [...ads.topChannels]
+      .filter((c) => c.roas !== null && c.cost > 0)
+      .sort((a, b) => (a.roas ?? 0) - (b.roas ?? 0));
+    const worst = sorted[0];
+    if (worst && worst.roas !== null && worst.roas < ads.roas * 0.85) {
+      out.push({
+        id: `ads-roas-${worst.channel}`,
+        category: "流入",
+        scope: "チャネル",
+        target: `${worst.channel}（広告）`,
+        summary: `チャネル ROAS ${formatRoas(worst.roas)} が全体平均 ${formatRoas(ads.roas)} を下回り、広告費効率が悪化。同チャネルへの予算配分の見直しが必要。`,
+        evidence: `広告費 ¥${Math.round(worst.cost).toLocaleString("ja-JP")} / 広告経由売上 ¥${Math.round(worst.revenue).toLocaleString("ja-JP")}`,
+        impact: worst.cost > ads.totalCost * 0.2 ? "高" : "中",
+      });
+    }
+  }
+
+  // CPC上昇/CVR低下のシグナル（最も CPC が高いチャネル）
+  if (ads.hasClicks && ads.cpc !== null) {
+    const ranked = [...ads.topChannels]
+      .filter((c) => c.cpc !== null)
+      .sort((a, b) => (b.cpc ?? 0) - (a.cpc ?? 0));
+    const worstCpc = ranked[0];
+    if (
+      worstCpc &&
+      worstCpc.cpc !== null &&
+      worstCpc.cpc > ads.cpc * 1.4 &&
+      worstCpc.cost > ads.totalCost * 0.1
+    ) {
+      out.push({
+        id: `ads-cpc-${worstCpc.channel}`,
+        category: "流入",
+        scope: "チャネル",
+        target: `${worstCpc.channel}（広告）`,
+        summary: `CPC ${formatCpc(worstCpc.cpc)} が全体平均 ${formatCpc(ads.cpc)} を大きく上回り、クリック単価高騰が流入縮小の要因候補。`,
+        evidence: `クリック数 ${worstCpc.clicks.toLocaleString("ja-JP")} / 広告費 ¥${Math.round(worstCpc.cost).toLocaleString("ja-JP")}`,
+        impact: "中",
+      });
+    }
+  }
+
+  // 効率悪化キャンペーン（aggregateAds の判定をそのまま反映）
+  for (const camp of ads.inefficientCampaigns) {
+    out.push({
+      id: `ads-camp-${camp.campaign}`,
+      category: "流入",
+      scope: "商品",
+      target: `${camp.campaign}（${camp.channel}）`,
+      summary: camp.reason,
+      evidence: `広告費 ¥${Math.round(camp.cost).toLocaleString("ja-JP")} / ROAS ${formatRoas(camp.roas)}`,
+      impact: "中",
+    });
+  }
+
+  return out;
+}
+
+function buildAdsActions(ads: AdsAggregation): RevenueNextAction[] {
+  const out: RevenueNextAction[] = [];
+  if (ads.totalCost <= 0) return out;
+
+  // 配分見直し: ROASが全体平均を下回るチャネルからの予算移管
+  if (ads.hasRevenue && ads.roas !== null) {
+    const sorted = [...ads.topChannels]
+      .filter((c) => c.roas !== null && c.cost > 0)
+      .sort((a, b) => (a.roas ?? 0) - (b.roas ?? 0));
+    const worst = sorted[0];
+    const best = [...ads.topChannels]
+      .filter((c) => c.roas !== null)
+      .sort((a, b) => (b.roas ?? 0) - (a.roas ?? 0))[0];
+    if (
+      worst &&
+      best &&
+      worst.channel !== best.channel &&
+      worst.roas !== null &&
+      best.roas !== null &&
+      worst.roas < ads.roas
+    ) {
+      out.push({
+        id: "ads-reallocate",
+        area: "広告",
+        title: `${worst.channel} → ${best.channel} への広告費配分見直し`,
+        why: `${worst.channel} の ROAS ${formatRoas(worst.roas)} に対し ${best.channel} は ${formatRoas(best.roas)}。効率の高いチャネルへ寄せ、広告費1円あたりの売上回収を改善する。`,
+        expected: `想定 ROAS +${(((best.roas - worst.roas) / Math.max(0.01, worst.roas)) * 0.2 * 100).toFixed(0)}pt（保守試算）`,
+        effort: "低",
+        priority: "P1",
+        sendTo: "施策ボード",
+      });
+    }
+  }
+
+  // 効率悪化キャンペーンの停止/縮小
+  if (ads.inefficientCampaigns.length > 0) {
+    const c = ads.inefficientCampaigns[0];
+    out.push({
+      id: `ads-stop-${c.campaign}`,
+      area: "広告",
+      title: `${c.campaign} の停止 / 大幅縮小を検討`,
+      why: c.reason,
+      expected: `想定広告費削減 ¥${Math.round(c.cost * 0.6).toLocaleString("ja-JP")} / ROAS改善`,
+      effort: "低",
+      priority: "P1",
+      sendTo: "施策ボード",
+    });
+  }
+
+  // 拡張候補: ROAS最良チャネル
+  if (ads.hasRevenue && ads.roas !== null) {
+    const best = [...ads.topChannels]
+      .filter((c) => c.roas !== null)
+      .sort((a, b) => (b.roas ?? 0) - (a.roas ?? 0))[0];
+    if (best && best.roas !== null && best.roas > ads.roas * 1.15) {
+      out.push({
+        id: `ads-expand-${best.channel}`,
+        area: "広告",
+        title: `${best.channel} の拡張（広告費の追加投下）`,
+        why: `ROAS ${formatRoas(best.roas)} は全体平均 ${formatRoas(ads.roas)} を上回り、広告費を追加投下しても効率を維持しやすい。`,
+        expected: "想定売上 +¥320,000（広告費を 20% 増やした場合）",
+        effort: "低",
+        priority: "P2",
+        sendTo: "施策ボード",
+      });
+    }
+  }
+
+  return out;
 }
 
 const sourcePillTone: Record<FactorMode, "mint" | "sky" | "slate"> = {
@@ -347,11 +499,12 @@ const sourcePillLabel: Record<FactorMode, string> = {
 };
 
 export default function RevenueAnalysis() {
-  const { ga4Import, ordersImport } = useImport();
+  const { ga4Import, ordersImport, adsImport } = useImport();
   const base = revenueAnalysis;
 
   const ga4Agg = ga4Import?.aggregation ?? null;
   const ordersAgg = ordersImport?.aggregation ?? null;
+  const adsAgg = adsImport?.aggregation ?? null;
 
   const resolved = resolveFactors(base, ga4Agg, ordersAgg);
   const adjusted =
@@ -374,7 +527,17 @@ export default function RevenueAnalysis() {
     base.dataReadiness,
     !!ga4Import,
     !!ordersImport,
+    !!adsImport,
   );
+
+  const adsCauses = adsAgg ? buildAdsCauses(adsAgg) : [];
+  const adsActions = adsAgg ? buildAdsActions(adsAgg) : [];
+  const causes: RevenueCause[] = adsCauses.length
+    ? [...adsCauses, ...base.causes]
+    : base.causes;
+  const nextActions: RevenueNextAction[] = adsActions.length
+    ? [...adsActions, ...base.nextActions]
+    : base.nextActions;
 
   const HeadIcon = intent === "negative" ? TrendingDown : TrendingUp;
   const headIconClass =
@@ -408,7 +571,7 @@ export default function RevenueAnalysis() {
 
       <div className="space-y-5 px-6 py-5">
         {/* Real-data status banner */}
-        {(ga4Import || ordersImport) && (
+        {(ga4Import || ordersImport || adsImport) && (
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-2.5 text-[12px] text-emerald-800">
             <BarChart3 size={14} className="text-emerald-600" />
             <span className="font-semibold">CSV実値で反映中</span>
@@ -420,6 +583,11 @@ export default function RevenueAnalysis() {
             {ga4Import && (
               <Pill tone="sky" size="xs">
                 GA4 CSV: {ga4Import.fileName}
+              </Pill>
+            )}
+            {adsImport && (
+              <Pill tone="rose" size="xs">
+                広告CSV: {adsImport.fileName}
               </Pill>
             )}
             <span className="ml-auto text-[11px] text-emerald-700/80">
@@ -627,6 +795,120 @@ export default function RevenueAnalysis() {
           </div>
         )}
 
+        {/* Ads breakdown — only when ads CSV is loaded */}
+        {adsImport && (
+          <div className="grid gap-5 lg:grid-cols-2">
+            <SectionCard
+              title="広告 チャネル別 効率（ROAS / CPC / CVR）"
+              icon={<Megaphone size={16} className="text-rose-500" />}
+              action={
+                <span className="text-[11px] text-slate-500">
+                  CSV実値（上位5）
+                </span>
+              }
+            >
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <SmallStat
+                  label="広告費合計"
+                  value={`¥${Math.round(adsImport.aggregation.totalCost).toLocaleString("ja-JP")}`}
+                />
+                <SmallStat
+                  label="ROAS"
+                  value={formatRoas(adsImport.aggregation.roas)}
+                />
+                <SmallStat
+                  label="CPC"
+                  value={formatCpc(adsImport.aggregation.cpc)}
+                />
+                <SmallStat
+                  label="CVR"
+                  value={
+                    adsImport.aggregation.cvr === null
+                      ? "—"
+                      : formatPercent(adsImport.aggregation.cvr)
+                  }
+                />
+              </div>
+
+              <table className="table-clean mt-3">
+                <thead>
+                  <tr>
+                    <th>チャネル</th>
+                    <th className="!w-24">広告費</th>
+                    <th className="!w-20">CPC</th>
+                    <th className="!w-20">CVR</th>
+                    <th className="!w-20">ROAS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adsImport.aggregation.topChannels.map((c) => (
+                    <tr key={c.channel}>
+                      <td className="font-medium text-slate-800">
+                        {c.channel}
+                      </td>
+                      <td className="text-slate-700">
+                        ¥{Math.round(c.cost).toLocaleString("ja-JP")}
+                      </td>
+                      <td className="text-slate-600">{formatCpc(c.cpc)}</td>
+                      <td className="text-slate-600">
+                        {c.cvr === null ? "—" : formatPercent(c.cvr)}
+                      </td>
+                      <td className="text-slate-700">{formatRoas(c.roas)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </SectionCard>
+
+            <SectionCard
+              title="効率悪化キャンペーン候補"
+              icon={<AlertTriangle size={16} className="text-rose-600" />}
+              action={
+                <span className="text-[11px] text-slate-500">
+                  ROAS / CVR ベースの自動抽出
+                </span>
+              }
+            >
+              {adsImport.aggregation.inefficientCampaigns.length > 0 ? (
+                <ul className="space-y-2">
+                  {adsImport.aggregation.inefficientCampaigns.map((c) => (
+                    <li
+                      key={c.campaign}
+                      className="rounded-xl border border-rose-200 bg-rose-50/40 p-3 text-[12px]"
+                    >
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-semibold text-slate-800">
+                          {c.campaign}
+                        </span>
+                        <Pill tone="slate" size="xs">
+                          {c.channel}
+                        </Pill>
+                        <Pill tone="rose" size="xs">
+                          ROAS {formatRoas(c.roas)}
+                        </Pill>
+                        <span className="ml-auto text-[11px] text-slate-500">
+                          広告費 ¥
+                          {Math.round(c.cost).toLocaleString("ja-JP")}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-[11px] leading-5 text-slate-700">
+                        {c.reason}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-3 text-[11px] text-slate-500">
+                  全体平均を大きく下回るキャンペーンは見当たりません。配分は概ね効率的に保たれています。
+                </div>
+              )}
+              <p className="mt-3 text-[11px] text-slate-500">
+                ※ ROAS &lt; 全体平均 × 0.7、または CVR &lt; 全体平均 × 0.5 のキャンペーンを最大3件抽出。
+              </p>
+            </SectionCard>
+          </div>
+        )}
+
         {/* Causes + Next actions */}
         <div className="grid gap-5 lg:grid-cols-2">
           <SectionCard
@@ -639,7 +921,7 @@ export default function RevenueAnalysis() {
             }
           >
             <ul className="space-y-3">
-              {base.causes.map((c) => (
+              {causes.map((c) => (
                 <li
                   key={c.id}
                   className="rounded-xl border border-slate-100 bg-slate-50/40 p-3"
@@ -684,7 +966,7 @@ export default function RevenueAnalysis() {
             }
           >
             <ul className="space-y-3">
-              {base.nextActions.map((a) => (
+              {nextActions.map((a) => (
                 <li
                   key={a.id}
                   className="rounded-xl border border-slate-100 bg-white p-3"
@@ -765,9 +1047,13 @@ export default function RevenueAnalysis() {
               ))}
             </ul>
             <p className="mt-3 text-[11px] text-slate-500">
-              {ga4Import
-                ? "GA4 CSV のセッション/CVR を反映済み。BigQuery 直接接続で自動更新化するのは将来フェーズです。"
-                : "現状は静的サンプルで「セッション × CVR × AOV」の構造を仮置きしています。GA4 CSV を取込むとセッションとチャネル別CVRの精度が上がり、将来 BigQuery を読み取り接続すると自動更新になります。"}
+              {adsImport && ga4Import
+                ? "GA4 / 広告 CSV を反映済み。チャネル別 ROAS / CVR / CPC まで実値で要因分解しています。BigQuery 直接接続で自動更新化するのは将来フェーズです。"
+                : adsImport
+                  ? "広告CSV を反映済み。広告効率（ROAS / CPC / CVR）まで原因候補に組み込んでいます。GA4 CSV を追加するとセッション・CVR の精度がさらに上がります。"
+                  : ga4Import
+                    ? "GA4 CSV のセッション/CVR を反映済み。広告CSV を追加すると ROAS / CPC まで原因候補が広がります。BigQuery 直接接続で自動更新化するのは将来フェーズです。"
+                    : "現状は静的サンプルで「セッション × CVR × AOV」の構造を仮置きしています。GA4 CSV を取込むとセッションとチャネル別CVRの精度が上がり、広告CSVを追加するとROAS/CPCまで含めた要因分解が可能になります。"}
             </p>
           </SectionCard>
 
@@ -981,6 +1267,17 @@ function RevenueBridge({
           ? "※ 影響額は連鎖法による概算（ΔS×Cprev×Aprev → Scurr×ΔC×Aprev → Scurr×Ccurr×ΔA）。前月値は静的サンプルを推定値として用いています。"
           : "※ 影響額は概算です。GA4 / 広告CSV を取り込むとチャネル別の精度が上がります。"}
       </p>
+    </div>
+  );
+}
+
+function SmallStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-100 bg-white p-3">
+      <div className="text-[10px] text-slate-500">{label}</div>
+      <div className="mt-1 text-base font-semibold tracking-tight text-slate-900">
+        {value}
+      </div>
     </div>
   );
 }

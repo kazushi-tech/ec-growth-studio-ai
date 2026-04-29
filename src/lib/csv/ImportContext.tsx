@@ -16,11 +16,19 @@ import {
   aggregateGa4,
   type Ga4Aggregation,
 } from "./aggregateGa4";
+import { parseAdsCsv, type AdsParseResult } from "./parseAds";
 import {
+  aggregateAds,
+  type AdsAggregation,
+} from "./aggregateAds";
+import {
+  clearStoredAdsImport,
   clearStoredGa4Import,
   clearStoredOrdersImport,
+  loadAdsImport,
   loadGa4Import,
   loadOrdersImport,
+  saveAdsImport,
   saveGa4Import,
   saveOrdersImport,
 } from "./storage";
@@ -51,6 +59,19 @@ export type FailedGa4Import = {
   parseResult: Ga4ParseResult;
 };
 
+export type AdsImport = {
+  fileName: string;
+  importedAt: Date;
+  parseResult: AdsParseResult;
+  aggregation: AdsAggregation;
+};
+
+export type FailedAdsImport = {
+  fileName: string;
+  attemptedAt: Date;
+  parseResult: AdsParseResult;
+};
+
 type ImportOutcome =
   | { kind: "success"; import: OrdersImport }
   | { kind: "failure"; failure: FailedImport };
@@ -58,6 +79,10 @@ type ImportOutcome =
 type Ga4ImportOutcome =
   | { kind: "success"; import: Ga4Import }
   | { kind: "failure"; failure: FailedGa4Import };
+
+type AdsImportOutcome =
+  | { kind: "success"; import: AdsImport }
+  | { kind: "failure"; failure: FailedAdsImport };
 
 type ImportContextValue = {
   ordersImport: OrdersImport | null;
@@ -73,6 +98,13 @@ type ImportContextValue = {
   importGa4File: (file: File) => Promise<Ga4ImportOutcome>;
   clearGa4Import: () => void;
   dismissGa4Failure: () => void;
+
+  adsImport: AdsImport | null;
+  adsFailure: FailedAdsImport | null;
+  isImportingAds: boolean;
+  importAdsFile: (file: File) => Promise<AdsImportOutcome>;
+  clearAdsImport: () => void;
+  dismissAdsFailure: () => void;
 };
 
 const ImportContext = createContext<ImportContextValue | null>(null);
@@ -89,6 +121,12 @@ export function ImportProvider({ children }: { children: ReactNode }) {
   );
   const [ga4Failure, setGa4Failure] = useState<FailedGa4Import | null>(null);
   const [isImportingGa4, setIsImportingGa4] = useState(false);
+
+  const [adsImport, setAdsImport] = useState<AdsImport | null>(() =>
+    loadAdsImport(),
+  );
+  const [adsFailure, setAdsFailure] = useState<FailedAdsImport | null>(null);
+  const [isImportingAds, setIsImportingAds] = useState(false);
 
   const importOrdersFile = useCallback(
     async (file: File): Promise<ImportOutcome> => {
@@ -179,6 +217,48 @@ export function ImportProvider({ children }: { children: ReactNode }) {
     setGa4Failure(null);
   }, []);
 
+  const importAdsFile = useCallback(
+    async (file: File): Promise<AdsImportOutcome> => {
+      setIsImportingAds(true);
+      try {
+        const parseResult = await parseAdsCsv(file);
+        if (parseResult.errors.length > 0) {
+          const failure: FailedAdsImport = {
+            fileName: file.name,
+            attemptedAt: new Date(),
+            parseResult,
+          };
+          setAdsFailure(failure);
+          return { kind: "failure", failure };
+        }
+        const aggregation = aggregateAds(parseResult.rows);
+        const next: AdsImport = {
+          fileName: file.name,
+          importedAt: new Date(),
+          parseResult,
+          aggregation,
+        };
+        setAdsImport(next);
+        setAdsFailure(null);
+        saveAdsImport(next);
+        return { kind: "success", import: next };
+      } finally {
+        setIsImportingAds(false);
+      }
+    },
+    [],
+  );
+
+  const clearAdsImport = useCallback(() => {
+    setAdsImport(null);
+    setAdsFailure(null);
+    clearStoredAdsImport();
+  }, []);
+
+  const dismissAdsFailure = useCallback(() => {
+    setAdsFailure(null);
+  }, []);
+
   const value = useMemo<ImportContextValue>(
     () => ({
       ordersImport,
@@ -193,6 +273,12 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       importGa4File,
       clearGa4Import,
       dismissGa4Failure,
+      adsImport,
+      adsFailure,
+      isImportingAds,
+      importAdsFile,
+      clearAdsImport,
+      dismissAdsFailure,
     }),
     [
       ordersImport,
@@ -207,6 +293,12 @@ export function ImportProvider({ children }: { children: ReactNode }) {
       importGa4File,
       clearGa4Import,
       dismissGa4Failure,
+      adsImport,
+      adsFailure,
+      isImportingAds,
+      importAdsFile,
+      clearAdsImport,
+      dismissAdsFailure,
     ],
   );
 

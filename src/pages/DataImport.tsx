@@ -26,6 +26,7 @@ import type { DataSource } from "../data/sample";
 import { useImport } from "../lib/csv/ImportContext";
 import { formatYen, formatInt } from "../lib/csv/aggregateOrders";
 import { formatPercent } from "../lib/csv/aggregateGa4";
+import { formatRoas, formatCpc } from "../lib/csv/aggregateAds";
 
 const sourceIcon = (name: string) => {
   if (name.includes("注文") || name.includes("商品データ"))
@@ -56,7 +57,7 @@ const stateTone = (s: DataSource["status"]) => {
   }
 };
 
-type CsvMode = "orders" | "ga4";
+type CsvMode = "orders" | "ga4" | "ads";
 
 export default function DataImport() {
   const {
@@ -72,6 +73,12 @@ export default function DataImport() {
     importGa4File,
     clearGa4Import,
     dismissGa4Failure,
+    adsImport,
+    adsFailure,
+    isImportingAds,
+    importAdsFile,
+    clearAdsImport,
+    dismissAdsFailure,
   } = useImport();
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -90,6 +97,8 @@ export default function DataImport() {
     try {
       if (csvMode === "ga4") {
         await importGa4File(file);
+      } else if (csvMode === "ads") {
+        await importAdsFile(file);
       } else {
         await importOrdersFile(file);
       }
@@ -266,17 +275,12 @@ export default function DataImport() {
             <SummaryItem
               label="接続済みデータ"
               value={String(
-                6 + (ordersImport ? 1 : 0) + (ga4Import ? 1 : 0),
+                6 +
+                  (ordersImport ? 1 : 0) +
+                  (ga4Import ? 1 : 0) +
+                  (adsImport ? 1 : 0),
               )}
-              sub={
-                ordersImport && ga4Import
-                  ? "注文CSV / GA4 CSV 取込済み"
-                  : ordersImport
-                    ? "注文CSV 取込済み"
-                    : ga4Import
-                      ? "GA4 CSV 取込済み"
-                      : "前月比 +1"
-              }
+              sub={summaryConnectedSub(ordersImport, ga4Import, adsImport)}
               tone="emerald"
             />
             <SummaryItem
@@ -287,23 +291,25 @@ export default function DataImport() {
             />
             <SummaryItem
               label="最新取込"
-              value={latestImportLabel(ordersImport, ga4Import)}
-              sub={latestImportSub(ordersImport, ga4Import)}
+              value={latestImportLabel(ordersImport, ga4Import, adsImport)}
+              sub={latestImportSub(ordersImport, ga4Import, adsImport)}
             />
             <SummaryItem
               label="AI診断データ充足率"
-              value={ga4Import ? "84%" : "78%"}
-              sub={ga4Import ? "GA4取込で +6pt" : "前月比 +8pt"}
+              value={fulfillmentLabel(ga4Import, adsImport)}
+              sub={fulfillmentSub(ga4Import, adsImport)}
               tone="emerald"
-              progress={ga4Import ? 84 : 78}
+              progress={fulfillmentValue(ga4Import, adsImport)}
             />
             <SummaryItem
               label="今月の診断ステータス"
               value="診断可能"
               sub={
-                ga4Import
-                  ? "GA4実値で要因分析が精度向上"
-                  : "全体の78%のデータを確保"
+                adsImport
+                  ? "広告CSV取込で広告効率まで要因分解可能"
+                  : ga4Import
+                    ? "GA4実値で要因分析が精度向上"
+                    : "全体の78%のデータを確保"
               }
               tone="emerald"
             />
@@ -820,6 +826,296 @@ export default function DataImport() {
           </SectionCard>
         )}
 
+        {/* Ads CSV failure panel */}
+        {adsFailure && (
+          <SectionCard
+            title="広告CSV 取込失敗"
+            icon={<XCircle size={16} className="text-rose-600" />}
+            action={
+              <button
+                onClick={dismissAdsFailure}
+                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+              >
+                閉じる
+              </button>
+            }
+          >
+            <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3 text-[12px] text-rose-800">
+              <div className="flex flex-wrap items-center gap-2">
+                <Pill tone="rose" size="xs">
+                  反映なし
+                </Pill>
+                <span className="font-mono text-[11px]">{adsFailure.fileName}</span>
+                <span className="text-[11px] text-rose-700/70">
+                  {adsFailure.attemptedAt.toLocaleString("ja-JP")}
+                </span>
+              </div>
+              <p className="mt-2 leading-6">
+                広告CSVを解釈できなかったため、売上要因分析の広告効率/ROAS には反映されていません。
+                {adsImport
+                  ? "直前に成功した広告取込はそのまま維持されています。"
+                  : "広告未取込状態のままです。"}
+              </p>
+            </div>
+
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              <MessageBlock
+                tone="rose"
+                title={`エラー (${adsFailure.parseResult.errors.length})`}
+                items={adsFailure.parseResult.errors.map((e) => e.message)}
+                icon={<XCircle size={13} />}
+              />
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+                <div className="font-semibold text-slate-700">検出されたカラム</div>
+                <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                  {Object.entries(adsFailure.parseResult.detectedColumns).map(
+                    ([k, v]) => (
+                      <li key={k} className="font-mono text-[10px]">
+                        {k}: {v ?? <span className="text-rose-500">未検出</span>}
+                      </li>
+                    ),
+                  )}
+                </ul>
+                <div className="mt-2 text-[10px] text-slate-500">
+                  受理した行数: {formatInt(adsFailure.parseResult.acceptedRows)} /{" "}
+                  {formatInt(adsFailure.parseResult.totalRows)}
+                </div>
+              </div>
+            </div>
+
+            {adsFailure.parseResult.warnings.length > 0 && (
+              <div className="mt-3">
+                <MessageBlock
+                  tone="amber"
+                  title={`警告 (${adsFailure.parseResult.warnings.length})`}
+                  items={adsFailure.parseResult.warnings
+                    .slice(0, 8)
+                    .map((w) =>
+                      w.field
+                        ? `行 ${w.row} [${w.field}]: ${w.message}`
+                        : `行 ${w.row}: ${w.message}`,
+                    )}
+                  icon={<AlertTriangle size={13} />}
+                  moreCount={Math.max(
+                    0,
+                    adsFailure.parseResult.warnings.length - 8,
+                  )}
+                />
+              </div>
+            )}
+          </SectionCard>
+        )}
+
+        {/* Ads CSV import result */}
+        {adsImport && (
+          <SectionCard
+            title="広告CSV 取込結果"
+            icon={<Megaphone size={16} className="text-rose-500" />}
+            action={
+              <button
+                onClick={clearAdsImport}
+                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+              >
+                <RefreshCw size={12} /> 広告取込を解除
+              </button>
+            }
+          >
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+              <SummaryItem
+                label="広告費合計"
+                value={formatYen(adsImport.aggregation.totalCost)}
+                sub={`期間: ${formatPeriod(adsImport.aggregation.periodStart, adsImport.aggregation.periodEnd)}`}
+                tone="emerald"
+              />
+              <SummaryItem
+                label="クリック数"
+                value={
+                  adsImport.aggregation.hasClicks
+                    ? formatInt(adsImport.aggregation.totalClicks)
+                    : "—"
+                }
+                sub={
+                  adsImport.aggregation.hasClicks ? "clicks 合計" : "clicks 列なし"
+                }
+                tone={adsImport.aggregation.hasClicks ? "emerald" : undefined}
+              />
+              <SummaryItem
+                label="CPC"
+                value={formatCpc(adsImport.aggregation.cpc)}
+                sub="広告費 ÷ クリック"
+                tone={adsImport.aggregation.cpc !== null ? "emerald" : undefined}
+              />
+              <SummaryItem
+                label="CVR"
+                value={
+                  adsImport.aggregation.cvr === null
+                    ? "—"
+                    : formatPercent(adsImport.aggregation.cvr)
+                }
+                sub="conversions ÷ clicks"
+                tone={adsImport.aggregation.cvr !== null ? "emerald" : undefined}
+              />
+              <SummaryItem
+                label="ROAS"
+                value={formatRoas(adsImport.aggregation.roas)}
+                sub={
+                  adsImport.aggregation.hasRevenue
+                    ? "広告経由売上 ÷ 広告費"
+                    : "revenue 列なし"
+                }
+                tone={
+                  adsImport.aggregation.roas !== null ? "emerald" : undefined
+                }
+              />
+            </div>
+
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              <div>
+                <div className="text-[11px] font-semibold text-slate-700">
+                  チャネル別 上位
+                </div>
+                <table className="table-clean mt-1.5">
+                  <thead>
+                    <tr>
+                      <th>チャネル</th>
+                      <th className="!w-24">広告費</th>
+                      <th className="!w-20">CPC</th>
+                      <th className="!w-20">CVR</th>
+                      <th className="!w-20">ROAS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adsImport.aggregation.topChannels.map((c) => (
+                      <tr key={c.channel}>
+                        <td className="font-medium text-slate-800">
+                          {c.channel}
+                        </td>
+                        <td className="text-slate-700">
+                          {formatYen(c.cost)}
+                        </td>
+                        <td className="text-slate-600">{formatCpc(c.cpc)}</td>
+                        <td className="text-slate-600">
+                          {c.cvr === null ? "—" : formatPercent(c.cvr)}
+                        </td>
+                        <td className="text-slate-700">{formatRoas(c.roas)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div className="mt-3 text-[11px] font-semibold text-slate-700">
+                  キャンペーン別 上位
+                </div>
+                <table className="table-clean mt-1.5">
+                  <thead>
+                    <tr>
+                      <th>キャンペーン</th>
+                      <th className="!w-20">媒体</th>
+                      <th className="!w-24">広告費</th>
+                      <th className="!w-20">ROAS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adsImport.aggregation.topCampaigns.map((c) => (
+                      <tr key={c.campaign}>
+                        <td className="font-medium text-slate-800">
+                          {c.campaign}
+                        </td>
+                        <td className="text-slate-600">{c.channel}</td>
+                        <td className="text-slate-700">{formatYen(c.cost)}</td>
+                        <td className="text-slate-700">
+                          {formatRoas(c.roas)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="space-y-2">
+                {adsImport.aggregation.inefficientCampaigns.length > 0 && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50/40 p-3 text-[12px]">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-700">
+                      <AlertTriangle size={13} />
+                      効率悪化キャンペーン候補 (
+                      {adsImport.aggregation.inefficientCampaigns.length})
+                    </div>
+                    <ul className="mt-1.5 space-y-1.5 text-[11px] leading-5 text-slate-700">
+                      {adsImport.aggregation.inefficientCampaigns.map((c) => (
+                        <li
+                          key={c.campaign}
+                          className="rounded-lg bg-white/60 px-2 py-1.5"
+                        >
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-semibold text-slate-800">
+                              {c.campaign}
+                            </span>
+                            <Pill tone="slate" size="xs">
+                              {c.channel}
+                            </Pill>
+                            <Pill tone="rose" size="xs">
+                              ROAS {formatRoas(c.roas)}
+                            </Pill>
+                          </div>
+                          <p className="mt-0.5 text-slate-600">{c.reason}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {adsImport.parseResult.warnings.length > 0 ? (
+                  <MessageBlock
+                    tone="amber"
+                    title={`警告 (${adsImport.parseResult.warnings.length})`}
+                    items={adsImport.parseResult.warnings
+                      .slice(0, 8)
+                      .map((w) =>
+                        w.field
+                          ? `行 ${w.row} [${w.field}]: ${w.message}`
+                          : `行 ${w.row}: ${w.message}`,
+                      )}
+                    icon={<AlertTriangle size={13} />}
+                    moreCount={Math.max(
+                      0,
+                      adsImport.parseResult.warnings.length - 8,
+                    )}
+                  />
+                ) : (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-[11px] text-emerald-700">
+                    警告・エラーなしで取込完了しました。
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+                  <div className="font-semibold text-slate-700">
+                    検出されたカラム
+                  </div>
+                  <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                    {Object.entries(adsImport.parseResult.detectedColumns).map(
+                      ([k, v]) => (
+                        <li key={k} className="font-mono text-[10px]">
+                          {k}:{" "}
+                          {v ?? <span className="text-rose-500">未検出</span>}
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                  <div className="mt-2 text-[10px] text-slate-500">
+                    受理した行数: {formatInt(adsImport.parseResult.acceptedRows)} /{" "}
+                    {formatInt(adsImport.parseResult.totalRows)}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-rose-200 bg-rose-50/40 p-3 text-[11px] text-slate-700">
+                  広告CSV はメモリ／ブラウザ保存のみで処理しています。
+                  外部送信なし。Google広告 / Meta広告 API 接続は将来フェーズです。
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+        )}
+
         {/* Two cols: data source list / AI diagnosis influence */}
         <div className="grid gap-5 lg:grid-cols-3">
           <SectionCard
@@ -843,20 +1139,31 @@ export default function DataImport() {
               <tbody>
                 {dataSources.map((d) => {
                   const isGa4 = d.name.includes("GA4");
-                  const status: DataSource["status"] =
-                    isGa4 && ga4Import ? "取込済み" : d.status;
-                  const updated =
+                  const isAds = d.name.includes("広告");
+                  const overlay =
                     isGa4 && ga4Import
-                      ? ga4Import.importedAt.toLocaleDateString("ja-JP")
-                      : d.updated;
-                  const count =
-                    isGa4 && ga4Import
-                      ? `${formatInt(ga4Import.parseResult.acceptedRows)}行`
-                      : d.count;
-                  const impact =
-                    isGa4 && ga4Import
-                      ? "セッション/CVRを実値で反映中"
-                      : d.impact;
+                      ? {
+                          status: "取込済み" as DataSource["status"],
+                          updated: ga4Import.importedAt.toLocaleDateString(
+                            "ja-JP",
+                          ),
+                          count: `${formatInt(ga4Import.parseResult.acceptedRows)}行`,
+                          impact: "セッション/CVRを実値で反映中",
+                        }
+                      : isAds && adsImport
+                        ? {
+                            status: "取込済み" as DataSource["status"],
+                            updated: adsImport.importedAt.toLocaleDateString(
+                              "ja-JP",
+                            ),
+                            count: `${formatInt(adsImport.parseResult.acceptedRows)}行`,
+                            impact: "ROAS / CPC / CVR を実値で反映中",
+                          }
+                        : null;
+                  const status: DataSource["status"] = overlay?.status ?? d.status;
+                  const updated = overlay?.updated ?? d.updated;
+                  const count = overlay?.count ?? d.count;
+                  const impact = overlay?.impact ?? d.impact;
                   return (
                     <tr key={d.name}>
                       <td>
@@ -975,6 +1282,18 @@ export default function DataImport() {
                 <BarChart3 size={12} className="mr-1 inline" />
                 GA4 CSV
               </button>
+              <button
+                type="button"
+                onClick={() => setCsvMode("ads")}
+                className={`flex-1 rounded-md px-2 py-1.5 font-medium transition-colors ${
+                  csvMode === "ads"
+                    ? "bg-navy-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <Megaphone size={12} className="mr-1 inline" />
+                広告CSV
+              </button>
             </div>
 
             <div
@@ -993,11 +1312,13 @@ export default function DataImport() {
             >
               <Cloud size={28} className="mx-auto text-slate-400" />
               <div className="mt-2 text-sm font-semibold text-slate-700">
-                {isImporting || isImportingGa4
+                {isImporting || isImportingGa4 || isImportingAds
                   ? "読み込み中..."
                   : csvMode === "ga4"
                     ? "GA4 CSV をドラッグ＆ドロップ"
-                    : "注文CSV をドラッグ＆ドロップ"}
+                    : csvMode === "ads"
+                      ? "広告CSV をドラッグ＆ドロップ"
+                      : "注文CSV をドラッグ＆ドロップ"}
               </div>
               <div className="text-[11px] text-slate-500">
                 またはクリックしてファイルを選択
@@ -1006,10 +1327,10 @@ export default function DataImport() {
                 {[
                   { label: "注文CSV", active: csvMode === "orders" },
                   { label: "GA4 CSV", active: csvMode === "ga4" },
+                  { label: "広告CSV", active: csvMode === "ads" },
                   { label: "商品CSV", active: false },
                   { label: "在庫CSV", active: false },
                   { label: "レビューCSV", active: false },
-                  { label: "広告CSV", active: false },
                   { label: "CRM CSV", active: false },
                 ].map((t) => (
                   <Pill
@@ -1028,23 +1349,29 @@ export default function DataImport() {
                     e.stopPropagation();
                     triggerSelect();
                   }}
-                  disabled={isImporting || isImportingGa4}
+                  disabled={isImporting || isImportingGa4 || isImportingAds}
                 >
                   <Upload size={12} />{" "}
                   {csvMode === "ga4"
                     ? "GA4 CSV をアップロード"
-                    : "注文CSV をアップロード"}
+                    : csvMode === "ads"
+                      ? "広告CSV をアップロード"
+                      : "注文CSV をアップロード"}
                 </button>
                 <a
                   href={
                     csvMode === "ga4"
                       ? "/samples/ga4_sample.csv"
-                      : "/samples/orders_sample.csv"
+                      : csvMode === "ads"
+                        ? "/samples/ads_sample.csv"
+                        : "/samples/orders_sample.csv"
                   }
                   download={
                     csvMode === "ga4"
                       ? "ga4_sample.csv"
-                      : "orders_sample.csv"
+                      : csvMode === "ads"
+                        ? "ads_sample.csv"
+                        : "orders_sample.csv"
                   }
                   className="btn-secondary px-3 py-1.5 text-xs"
                   onClick={(e) => e.stopPropagation()}
@@ -1052,7 +1379,9 @@ export default function DataImport() {
                   <Download size={12} />{" "}
                   {csvMode === "ga4"
                     ? "GA4 CSVテンプレートを取得"
-                    : "注文CSVテンプレートを取得"}
+                    : csvMode === "ads"
+                      ? "広告CSVテンプレートを取得"
+                      : "注文CSVテンプレートを取得"}
                 </a>
               </div>
               {uploadError && (
@@ -1062,7 +1391,7 @@ export default function DataImport() {
               )}
             </div>
 
-            {csvMode === "orders" ? (
+            {csvMode === "orders" && (
               <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
                 <div className="font-semibold text-slate-700">
                   注文CSVテンプレート（最小カラム）
@@ -1088,7 +1417,8 @@ export default function DataImport() {
                   </li>
                 </ul>
               </div>
-            ) : (
+            )}
+            {csvMode === "ga4" && (
               <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
                 <div className="font-semibold text-slate-700">
                   GA4 CSVテンプレート（最小カラム）
@@ -1114,6 +1444,42 @@ export default function DataImport() {
                   </li>
                   <li>
                     <span className="font-mono text-[10px]">landing_page</span> — LP（任意） / page_path / ランディングページ
+                  </li>
+                </ul>
+              </div>
+            )}
+            {csvMode === "ads" && (
+              <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+                <div className="font-semibold text-slate-700">
+                  広告CSVテンプレート（最小カラム）
+                </div>
+                <ul className="mt-1.5 space-y-0.5">
+                  <li>
+                    <span className="font-mono text-[10px]">campaign</span> — キャンペーン名（必須） / campaign_name / キャンペーン
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">channel</span> — 媒体（必須） / platform / media / 媒体名
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">date</span> — 配信日（必須） / day / 日付
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">cost</span> — 広告費（必須） / spend / 費用 / 消化金額
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">impressions</span> — 表示回数（任意） / imp
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">clicks</span> — クリック数（任意） / click
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">conversions</span> — コンバージョン（任意） / conv / purchases
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">revenue</span> — 広告経由売上（任意・ROAS算出に使用） / conversion_value
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">product_name</span> — 紐付け商品（任意）
                   </li>
                 </ul>
               </div>
@@ -1264,31 +1630,67 @@ function formatPeriod(start: Date | null, end: Date | null): string {
   return `${fmt(start)} 〜 ${fmt(end)}`;
 }
 
+type ImportLite = { fileName: string; importedAt: Date } | null;
+
+function pickLatest(...sources: ImportLite[]): ImportLite {
+  let latest: ImportLite = null;
+  for (const s of sources) {
+    if (!s) continue;
+    if (!latest || s.importedAt.getTime() > latest.importedAt.getTime()) {
+      latest = s;
+    }
+  }
+  return latest;
+}
+
 function latestImportLabel(
-  orders: { importedAt: Date } | null,
-  ga4: { importedAt: Date } | null,
+  orders: ImportLite,
+  ga4: ImportLite,
+  ads: ImportLite,
 ): string {
-  const t =
-    orders && ga4
-      ? orders.importedAt.getTime() >= ga4.importedAt.getTime()
-        ? orders.importedAt
-        : ga4.importedAt
-      : (orders?.importedAt ?? ga4?.importedAt ?? null);
-  return t ? t.toLocaleString("ja-JP") : "2026/04/29 09:42";
+  const newer = pickLatest(orders, ga4, ads);
+  return newer ? newer.importedAt.toLocaleString("ja-JP") : "2026/04/29 09:42";
 }
 
 function latestImportSub(
-  orders: { fileName: string; importedAt: Date } | null,
-  ga4: { fileName: string; importedAt: Date } | null,
+  orders: ImportLite,
+  ga4: ImportLite,
+  ads: ImportLite,
 ): string {
-  if (orders && ga4) {
-    const newer =
-      orders.importedAt.getTime() >= ga4.importedAt.getTime() ? orders : ga4;
-    return `ファイル: ${newer.fileName}`;
-  }
-  if (orders) return `ファイル: ${orders.fileName}`;
-  if (ga4) return `ファイル: ${ga4.fileName}`;
+  const newer = pickLatest(orders, ga4, ads);
+  if (newer) return `ファイル: ${newer.fileName}`;
   return "前回: 2026/04/28 18:31";
+}
+
+function summaryConnectedSub(
+  orders: ImportLite,
+  ga4: ImportLite,
+  ads: ImportLite,
+): string {
+  const labels: string[] = [];
+  if (orders) labels.push("注文CSV");
+  if (ga4) labels.push("GA4 CSV");
+  if (ads) labels.push("広告CSV");
+  if (labels.length === 0) return "前月比 +1";
+  return `${labels.join(" / ")} 取込済み`;
+}
+
+function fulfillmentValue(ga4: ImportLite, ads: ImportLite): number {
+  let v = 78;
+  if (ga4) v += 6;
+  if (ads) v += 6;
+  return Math.min(100, v);
+}
+
+function fulfillmentLabel(ga4: ImportLite, ads: ImportLite): string {
+  return `${fulfillmentValue(ga4, ads)}%`;
+}
+
+function fulfillmentSub(ga4: ImportLite, ads: ImportLite): string {
+  if (ga4 && ads) return "GA4 / 広告 取込で +12pt";
+  if (ga4) return "GA4取込で +6pt";
+  if (ads) return "広告CSV取込で +6pt";
+  return "前月比 +8pt";
 }
 
 function MessageBlock({
