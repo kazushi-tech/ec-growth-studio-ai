@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: #0f172a;
+    background: #f6f8fc;
+  }
+  body {
+    @apply font-sans text-[15px] leading-relaxed text-slate-800;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply text-slate-900;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-slate-200/80 bg-white shadow-card;
+  }
+  .card-hover {
+    @apply transition-shadow hover:shadow-cardLg;
+  }
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .pill-mint {
+    @apply pill bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100;
+  }
+  .pill-rose {
+    @apply pill bg-rose-50 text-rose-700 ring-1 ring-rose-100;
+  }
+  .pill-gold {
+    @apply pill bg-amber-50 text-amber-700 ring-1 ring-amber-100;
+  }
+  .pill-sky {
+    @apply pill bg-sky-50 text-sky-700 ring-1 ring-sky-100;
+  }
+  .pill-slate {
+    @apply pill bg-slate-100 text-slate-700 ring-1 ring-slate-200;
+  }
+  .pill-violet {
+    @apply pill bg-violet-50 text-violet-700 ring-1 ring-violet-100;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition-colors;
+  }
+  .btn-primary {
+    @apply btn bg-navy-900 text-white hover:bg-navy-800;
+  }
+  .btn-secondary {
+    @apply btn border border-slate-200 bg-white text-slate-700 hover:bg-slate-50;
+  }
+  .btn-ghost {
+    @apply btn text-slate-600 hover:bg-slate-100;
+  }
+  .btn-success {
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-500;
+  }
+
+  .kpi-label {
+    @apply text-xs font-medium text-slate-500;
+  }
+  .kpi-value {
+    @apply text-2xl font-semibold tracking-tight text-slate-900;
+  }
+
+  .section-title {
+    @apply flex items-center gap-2 text-sm font-semibold text-slate-700;
+  }
+
+  .table-clean {
+    @apply w-full text-sm;
+  }
+  .table-clean thead th {
+    @apply border-b border-slate-200 px-3 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-slate-500;
+  }
+  .table-clean tbody td {
+    @apply border-b border-slate-100 px-3 py-3 align-middle text-slate-700;
+  }
+  .table-clean tbody tr:hover {
+    @apply bg-slate-50/60;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-navy-200 transition-colors hover:bg-navy-800/70 hover:text-white;
+  }
+  .nav-item-active {
+    @apply bg-white/10 text-white;
+  }
+}
+
+::selection {
+  background: #dbeafe;
+}

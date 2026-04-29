@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+dist-ssr/
+build/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Test / verification artifacts
+output/
+playwright-report/
+test-results/
+coverage/
+
+# Local env
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Claude / agent state (keep instructions, ignore caches)
+.claude/cache/
+.claude/transcripts/
