@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Upload,
   Sparkles,
@@ -17,6 +18,7 @@ import {
   XCircle,
   RefreshCw,
   ShieldCheck,
+  Activity,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import SectionCard from "../components/ui/SectionCard";
@@ -131,9 +133,12 @@ export default function DataImport() {
             >
               <Upload size={12} /> CSVをアップロード
             </button>
-            <button className="btn-secondary px-3 py-1.5 text-xs">
-              <Sparkles size={12} /> AI診断を開始
-            </button>
+            <Link
+              to="/app/revenue-analysis"
+              className="btn-secondary px-3 py-1.5 text-xs"
+            >
+              <Activity size={12} /> 売上要因分析へ進む
+            </Link>
           </>
         }
       />
@@ -1598,18 +1603,24 @@ export default function DataImport() {
           >
             <Upload size={14} /> CSVをアップロード
           </button>
-          <button className="btn px-3 py-1.5 text-sm bg-white/10 text-white hover:bg-white/20">
-            <Plug size={14} /> Shopify APIに接続
-          </button>
+          <span
+            className="inline-flex items-center gap-1.5 rounded-md border border-white/20 bg-white/5 px-3 py-1.5 text-sm text-white/70"
+            title="Shopify Admin API / GA4 Data API / 広告API への直接接続は Phase 3 以降の対象です"
+          >
+            <Plug size={14} /> API連携は将来対応
+          </span>
           <button
             className="btn px-3 py-1.5 text-sm bg-white/10 text-white hover:bg-white/20"
             onClick={clearOrdersImport}
           >
             <Beaker size={14} /> サンプルデータで試す
           </button>
-          <button className="btn-success ml-auto px-3 py-1.5 text-sm">
-            <Sparkles size={14} /> AI診断を開始
-          </button>
+          <Link
+            to="/app/revenue-analysis"
+            className="btn-success ml-auto px-3 py-1.5 text-sm"
+          >
+            <Activity size={14} /> 売上要因分析へ進む
+          </Link>
           <a
             href="/samples/orders_sample.csv"
             download="orders_sample.csv"
