@@ -102,9 +102,68 @@ CSV/API取込 → AI診断 → 人間レビュー → 施策ボード → 効果
 将来的に Supabase / Postgres 等のバックエンドへ移行する際は、これらの型をそのまま
 DTO の起点として利用する想定。
 
+## 4.1 CSV-first MVP（注文CSV取込）
+
+CSV-first / API-later の世界観を本物にするため、注文CSVをアップロードして
+売上・注文数・AOV を実値で再計算する最小フローをプロトタイプに同梱する。
+永続化・AI API・Shopify API はまだ含めない（メモリ内のみ・ページ再読込で消える）。
+
+### 対応カラム（最小セット）
+
+注文CSVは以下のカラムを必須／任意で要求する。カラム名は表記ゆれを許容し、
+パース時に正規化（小文字 + アンダースコア化）してマッピングする。
+
+| 内部キー | 役割 | 受理する列名（例） |
+| --- | --- | --- |
+| `order_id` | 注文番号（必須） | order_id / orderid / order / 注文id / 注文番号 / 受注番号 |
+| `order_date` | 注文日（必須） | order_date / date / 注文日 / 受注日 / purchased_at / created_at |
+| `customer_id` | 顧客ID（任意） | customer_id / customerid / customer / 顧客id / 顧客番号 |
+| `product_name` | 商品名（必須） | product_name / product / item / 商品名 / アイテム名 / title |
+| `quantity` | 数量（必須） | quantity / qty / 数量 / 個数 / count |
+| `total_sales` | 売上（必須） | total_sales / total / sales / 売上 / amount / price / subtotal |
+
+- 数値は `¥`, `￥`, `,`, 全角スペース, `円` を除去してから `Number` で解釈
+- 日付は `YYYY-MM-DD` / `YYYY/MM/DD` / ISO8601 を許容（`/` を `-` に正規化）
+- ヘッダー前後の `BOM` / 空白はトリムする
+
+### 計算
+
+取込が成功したら以下を計算し、ダッシュボードKPIに反映する。
+
+- **売上合計** = `Σ total_sales`
+- **注文数** = `distinct(order_id)` 件数
+- **AOV** = 売上合計 ÷ 注文数
+- **ユニーク顧客数** = `distinct(customer_id)` 件数（任意項目があるときのみ意味を持つ）
+- **商品別売上 上位** = `product_name` 単位で集計、売上降順で TOP5
+
+### バリデーションと警告
+
+| 種類 | 取扱 |
+| --- | --- |
+| 必須カラム不足 | エラーとして表示し取込を停止 |
+| `order_id` / `product_name` が空 | その行をスキップし警告 |
+| 日付不正・数値不正・負の値 | その行をスキップし警告 |
+| Papa Parse の構文エラー | 行番号付きで警告 |
+| CSVが空 / ヘッダーが取れない | エラー扱い（取込結果は0件） |
+
+### UI
+
+- `/app/data-import` の CSVアップロードゾーンが、ドラッグ&ドロップ + クリック選択の両方に対応
+- 取込が成功すると **「注文CSV 取込結果」** セクションが現れ、売上 / 注文数 / AOV / 取込件数 / 商品別売上TOP / 警告 / エラー / 検出カラム一覧を表示
+- 「サンプルデータに戻す」または下部アクションバーの「サンプルデータで試す」で取込状態をクリア
+- ダッシュボード上部に「CSV取込済み: ファイル名」のバナーを表示し、KPIカードの売上 / 注文数 / AOV を取込値に置換
+- KPIカードの CVR / リピート率 / 広告ROAS は注文CSVから導出できないため、サンプルのまま「CSV未対応」と表示
+- CSVテンプレートは `/samples/orders_sample.csv` からダウンロード可能（リポジトリ内 `samples/csv/orders_sample.csv` と同一）
+
+### 永続化と将来拡張
+
+- 取込結果は React Context（`ImportProvider`）にメモリ保持されるのみ。ページ再読込で消える
+- 永続化（localStorage / Supabase）、商品CSV / 広告CSV / 在庫CSV、AI診断 API、Shopify API は次フェーズ
+
 ## 5. 未実装範囲（プロトタイプ時点）
 
-- CSVパース・カラムマッピング・実データ取込
+- 注文CSV以外（商品 / 広告 / 在庫 / レビュー / GA4 / CRM）のパース・マッピング
+- 取込結果の永続化（DB / localStorage）
 - Shopify / GA4 / 広告 / BigQuery API連携
 - AI診断ロジック（Claude/GPT 等への委譲含む）
 - 認証・認可・マルチテナント・組織管理

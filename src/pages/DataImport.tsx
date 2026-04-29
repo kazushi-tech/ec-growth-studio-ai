@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import {
   Upload,
   Sparkles,
@@ -13,12 +14,16 @@ import {
   BarChart3,
   Megaphone,
   Box,
+  XCircle,
+  RefreshCw,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import SectionCard from "../components/ui/SectionCard";
 import Pill from "../components/ui/Pill";
 import { dataSources } from "../data/sample";
 import type { DataSource } from "../data/sample";
+import { useImport } from "../lib/csv/ImportContext";
+import { formatYen, formatInt } from "../lib/csv/aggregateOrders";
 
 const sourceIcon = (name: string) => {
   if (name.includes("注文") || name.includes("商品データ"))
@@ -50,6 +55,37 @@ const stateTone = (s: DataSource["status"]) => {
 };
 
 export default function DataImport() {
+  const { ordersImport, isImporting, importOrdersFile, clearOrdersImport } =
+    useImport();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleFiles = async (files: FileList | null) => {
+    setUploadError(null);
+    const file = files?.[0];
+    if (!file) return;
+    if (!/\.csv$/i.test(file.name)) {
+      setUploadError("CSVファイル(.csv)を選択してください。");
+      return;
+    }
+    try {
+      await importOrdersFile(file);
+    } catch (e) {
+      setUploadError(
+        `読み込み中にエラーが発生しました: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    handleFiles(e.dataTransfer.files);
+  };
+
+  const triggerSelect = () => fileRef.current?.click();
+
   return (
     <>
       <Topbar
@@ -57,7 +93,11 @@ export default function DataImport() {
         subtitle="CSVから始めて、Shopify・GA4・広告APIへ段階的に拡張"
         actions={
           <>
-            <button className="btn-primary px-3 py-1.5 text-xs">
+            <button
+              className="btn-primary px-3 py-1.5 text-xs"
+              onClick={triggerSelect}
+              disabled={isImporting}
+            >
               <Upload size={12} /> CSVをアップロード
             </button>
             <button className="btn-secondary px-3 py-1.5 text-xs">
@@ -67,16 +107,42 @@ export default function DataImport() {
         }
       />
 
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={(e) => handleFiles(e.target.files)}
+      />
+
       <div className="space-y-5 px-6 py-5">
         {/* Connection summary */}
         <SectionCard title="データ接続サマリー" icon={<Database size={16} />}>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-            <SummaryItem label="接続済みデータ" value="6" sub="前月比 +1" tone="emerald" />
-            <SummaryItem label="未接続データ" value="3" sub="前月比 -1" tone="amber" />
+            <SummaryItem
+              label="接続済みデータ"
+              value={ordersImport ? "7" : "6"}
+              sub={ordersImport ? "CSV取込 +1" : "前月比 +1"}
+              tone="emerald"
+            />
+            <SummaryItem
+              label="未接続データ"
+              value="3"
+              sub="前月比 -1"
+              tone="amber"
+            />
             <SummaryItem
               label="最新取込"
-              value="2026/04/29 09:42"
-              sub="前回: 2026/04/28 18:31"
+              value={
+                ordersImport
+                  ? ordersImport.importedAt.toLocaleString("ja-JP")
+                  : "2026/04/29 09:42"
+              }
+              sub={
+                ordersImport
+                  ? `ファイル: ${ordersImport.fileName}`
+                  : "前回: 2026/04/28 18:31"
+              }
             />
             <SummaryItem
               label="AI診断データ充足率"
@@ -93,6 +159,135 @@ export default function DataImport() {
             />
           </div>
         </SectionCard>
+
+        {/* Import result panel — visible only after a CSV is uploaded */}
+        {ordersImport && (
+          <SectionCard
+            title="注文CSV 取込結果"
+            icon={<CheckCircle2 size={16} />}
+            action={
+              <button
+                onClick={clearOrdersImport}
+                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+              >
+                <RefreshCw size={12} /> サンプルデータに戻す
+              </button>
+            }
+          >
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <SummaryItem
+                label="売上合計"
+                value={formatYen(ordersImport.aggregation.totalSales)}
+                sub={`期間: ${formatPeriod(ordersImport.aggregation.periodStart, ordersImport.aggregation.periodEnd)}`}
+                tone="emerald"
+              />
+              <SummaryItem
+                label="注文数"
+                value={formatInt(ordersImport.aggregation.orderCount)}
+                sub={`ユニーク顧客: ${formatInt(ordersImport.aggregation.uniqueCustomers)}`}
+                tone="emerald"
+              />
+              <SummaryItem
+                label="AOV"
+                value={formatYen(ordersImport.aggregation.aov)}
+                sub="売上 ÷ 注文数"
+                tone="emerald"
+              />
+              <SummaryItem
+                label="取込件数"
+                value={`${formatInt(ordersImport.parseResult.acceptedRows)} / ${formatInt(ordersImport.parseResult.totalRows)}`}
+                sub={`スキップ: ${formatInt(ordersImport.parseResult.warnings.length)} 行`}
+                tone={
+                  ordersImport.parseResult.warnings.length ? "amber" : "emerald"
+                }
+              />
+            </div>
+
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              <div>
+                <div className="text-[11px] font-semibold text-slate-700">
+                  商品別売上 上位
+                </div>
+                <table className="table-clean mt-1.5">
+                  <thead>
+                    <tr>
+                      <th>商品</th>
+                      <th className="!w-20">注文</th>
+                      <th className="!w-20">数量</th>
+                      <th className="!w-28">売上</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ordersImport.aggregation.topProducts.map((p) => (
+                      <tr key={p.product_name}>
+                        <td className="font-medium text-slate-800">
+                          {p.product_name}
+                        </td>
+                        <td className="text-slate-600">{formatInt(p.orders)}</td>
+                        <td className="text-slate-600">
+                          {formatInt(p.quantity)}
+                        </td>
+                        <td className="font-medium text-slate-800">
+                          {formatYen(p.sales)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="space-y-2">
+                {ordersImport.parseResult.errors.length > 0 && (
+                  <MessageBlock
+                    tone="rose"
+                    title={`エラー (${ordersImport.parseResult.errors.length})`}
+                    items={ordersImport.parseResult.errors.map((e) => e.message)}
+                    icon={<XCircle size={13} />}
+                  />
+                )}
+                {ordersImport.parseResult.warnings.length > 0 && (
+                  <MessageBlock
+                    tone="amber"
+                    title={`警告 (${ordersImport.parseResult.warnings.length})`}
+                    items={ordersImport.parseResult.warnings
+                      .slice(0, 8)
+                      .map((w) =>
+                        w.field
+                          ? `行 ${w.row} [${w.field}]: ${w.message}`
+                          : `行 ${w.row}: ${w.message}`,
+                      )}
+                    icon={<AlertTriangle size={13} />}
+                    moreCount={Math.max(
+                      0,
+                      ordersImport.parseResult.warnings.length - 8,
+                    )}
+                  />
+                )}
+                {ordersImport.parseResult.errors.length === 0 &&
+                  ordersImport.parseResult.warnings.length === 0 && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-[11px] text-emerald-700">
+                      警告・エラーなしで取込完了しました。
+                    </div>
+                  )}
+
+                <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+                  <div className="font-semibold text-slate-700">
+                    検出されたカラム
+                  </div>
+                  <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                    {Object.entries(ordersImport.parseResult.detectedColumns).map(
+                      ([k, v]) => (
+                        <li key={k} className="font-mono text-[10px]">
+                          {k}: {v ?? <span className="text-rose-500">未検出</span>}
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+        )}
 
         {/* Two cols: data source list / AI diagnosis influence */}
         <div className="grid gap-5 lg:grid-cols-3">
@@ -207,31 +402,99 @@ export default function DataImport() {
             title="CSVアップロード"
             icon={<Upload size={16} />}
           >
-            <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/60 p-8 text-center">
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              onClick={triggerSelect}
+              className={`cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
+                dragOver
+                  ? "border-sky-400 bg-sky-50/60"
+                  : "border-slate-300 bg-slate-50/60 hover:bg-slate-100/60"
+              }`}
+            >
               <Cloud size={28} className="mx-auto text-slate-400" />
               <div className="mt-2 text-sm font-semibold text-slate-700">
-                CSVファイルをドラッグ＆ドロップ
+                {isImporting
+                  ? "読み込み中..."
+                  : "CSVファイルをドラッグ＆ドロップ"}
               </div>
               <div className="text-[11px] text-slate-500">
-                またはボタンからファイルを選択
+                またはクリックしてファイルを選択
               </div>
               <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-                {["注文CSV", "商品CSV", "在庫CSV", "レビューCSV", "広告CSV", "GA4 CSV", "CRM CSV"].map(
-                  (t) => (
-                    <Pill key={t} tone="slate" size="xs">
-                      {t}
-                    </Pill>
-                  )
-                )}
+                {[
+                  "注文CSV",
+                  "商品CSV",
+                  "在庫CSV",
+                  "レビューCSV",
+                  "広告CSV",
+                  "GA4 CSV",
+                  "CRM CSV",
+                ].map((t) => (
+                  <Pill
+                    key={t}
+                    tone={t === "注文CSV" ? "mint" : "slate"}
+                    size="xs"
+                  >
+                    {t}
+                  </Pill>
+                ))}
               </div>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
-                <button className="btn-primary px-3 py-1.5 text-xs">
+                <button
+                  className="btn-primary px-3 py-1.5 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerSelect();
+                  }}
+                  disabled={isImporting}
+                >
                   <Upload size={12} /> CSVをアップロード
                 </button>
-                <button className="btn-secondary px-3 py-1.5 text-xs">
+                <a
+                  href="/samples/orders_sample.csv"
+                  download="orders_sample.csv"
+                  className="btn-secondary px-3 py-1.5 text-xs"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Download size={12} /> CSVテンプレートを取得
-                </button>
+                </a>
               </div>
+              {uploadError && (
+                <div className="mt-3 inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1 text-[11px] text-rose-700">
+                  <XCircle size={12} /> {uploadError}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+              <div className="font-semibold text-slate-700">
+                注文CSVテンプレート（最小カラム）
+              </div>
+              <ul className="mt-1.5 space-y-0.5">
+                <li>
+                  <span className="font-mono text-[10px]">order_id</span> — 注文番号（必須）
+                </li>
+                <li>
+                  <span className="font-mono text-[10px]">order_date</span> — 注文日 / date / 注文日（YYYY-MM-DD）
+                </li>
+                <li>
+                  <span className="font-mono text-[10px]">customer_id</span> — 顧客ID（任意・リピート分析に使用）
+                </li>
+                <li>
+                  <span className="font-mono text-[10px]">product_name</span> — 商品名 / product / 商品名
+                </li>
+                <li>
+                  <span className="font-mono text-[10px]">quantity</span> — 数量 / qty
+                </li>
+                <li>
+                  <span className="font-mono text-[10px]">total_sales</span> — total / sales / 売上（税込・¥可）
+                </li>
+              </ul>
             </div>
           </SectionCard>
 
@@ -262,11 +525,27 @@ export default function DataImport() {
                 アップロード履歴（直近）
               </div>
               <ul className="mt-2 space-y-1.5 text-[11px]">
-                {[
-                  ["orders_202604.csv", "取込済み", "mint", "2026/04/29 09:42"],
-                  ["products_202604.csv", "取込済み", "mint", "2026/04/29 09:39"],
-                  ["inventory_202604.csv", "要確認", "gold", "2026/04/27 18:21"],
-                ].map(([n, s, t, d]) => (
+                {(ordersImport
+                  ? ([
+                      [
+                        ordersImport.fileName,
+                        ordersImport.parseResult.errors.length
+                          ? "要確認"
+                          : "取込済み",
+                        ordersImport.parseResult.errors.length
+                          ? "gold"
+                          : "mint",
+                        ordersImport.importedAt.toLocaleString("ja-JP"),
+                      ],
+                      ["products_202604.csv", "取込済み", "mint", "2026/04/29 09:39"],
+                      ["inventory_202604.csv", "要確認", "gold", "2026/04/27 18:21"],
+                    ] as const)
+                  : ([
+                      ["orders_202604.csv", "取込済み", "mint", "2026/04/29 09:42"],
+                      ["products_202604.csv", "取込済み", "mint", "2026/04/29 09:39"],
+                      ["inventory_202604.csv", "要確認", "gold", "2026/04/27 18:21"],
+                    ] as const)
+                ).map(([n, s, t, d]) => (
                   <li
                     key={n}
                     className="flex items-center justify-between rounded-lg border border-slate-100 px-2.5 py-1.5"
@@ -324,24 +603,77 @@ export default function DataImport() {
 
         {/* Bottom action bar */}
         <div className="flex flex-wrap items-center gap-2 rounded-xl bg-navy-950 px-4 py-3 text-white">
-          <button className="btn px-3 py-1.5 text-sm bg-white/10 text-white hover:bg-white/20">
+          <button
+            className="btn px-3 py-1.5 text-sm bg-white/10 text-white hover:bg-white/20"
+            onClick={triggerSelect}
+            disabled={isImporting}
+          >
             <Upload size={14} /> CSVをアップロード
           </button>
           <button className="btn px-3 py-1.5 text-sm bg-white/10 text-white hover:bg-white/20">
             <Plug size={14} /> Shopify APIに接続
           </button>
-          <button className="btn px-3 py-1.5 text-sm bg-white/10 text-white hover:bg-white/20">
+          <button
+            className="btn px-3 py-1.5 text-sm bg-white/10 text-white hover:bg-white/20"
+            onClick={clearOrdersImport}
+          >
             <Beaker size={14} /> サンプルデータで試す
           </button>
           <button className="btn-success ml-auto px-3 py-1.5 text-sm">
             <Sparkles size={14} /> AI診断を開始
           </button>
-          <button className="btn px-3 py-1.5 text-sm bg-white/10 text-white hover:bg-white/20">
+          <a
+            href="/samples/orders_sample.csv"
+            download="orders_sample.csv"
+            className="btn px-3 py-1.5 text-sm bg-white/10 text-white hover:bg-white/20"
+          >
             <Download size={14} /> データテンプレートを取得
-          </button>
+          </a>
         </div>
       </div>
     </>
+  );
+}
+
+function formatPeriod(start: Date | null, end: Date | null): string {
+  if (!start || !end) return "—";
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
+  return `${fmt(start)} 〜 ${fmt(end)}`;
+}
+
+function MessageBlock({
+  tone,
+  title,
+  items,
+  icon,
+  moreCount,
+}: {
+  tone: "rose" | "amber";
+  title: string;
+  items: string[];
+  icon: React.ReactNode;
+  moreCount?: number;
+}) {
+  const wrap =
+    tone === "rose"
+      ? "border-rose-200 bg-rose-50/60 text-rose-700"
+      : "border-amber-200 bg-amber-50/60 text-amber-700";
+  return (
+    <div className={`rounded-xl border p-3 ${wrap}`}>
+      <div className="flex items-center gap-1.5 text-xs font-semibold">
+        {icon}
+        {title}
+      </div>
+      <ul className="mt-1.5 space-y-0.5 text-[11px] leading-5">
+        {items.map((t, i) => (
+          <li key={i}>・{t}</li>
+        ))}
+        {moreCount && moreCount > 0 ? (
+          <li className="text-slate-500">…他 {moreCount} 件</li>
+        ) : null}
+      </ul>
+    </div>
   );
 }
 

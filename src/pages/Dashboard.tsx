@@ -23,10 +23,16 @@ import Pill, {
   judgmentTone,
   statusTone,
 } from "../components/ui/Pill";
-import { actions, kpis, products } from "../data/sample";
+import { actions, kpis as sampleKpis, products } from "../data/sample";
+import { useImport } from "../lib/csv/ImportContext";
+import { buildKpisFromImport } from "../lib/csv/buildKpis";
 
 export default function Dashboard() {
+  const { ordersImport } = useImport();
   const top5 = actions.slice(0, 5);
+  const kpis = ordersImport
+    ? buildKpisFromImport(ordersImport.aggregation)
+    : sampleKpis;
 
   return (
     <>
@@ -52,6 +58,24 @@ export default function Dashboard() {
       />
 
       <div className="space-y-5 px-6 py-5">
+        {ordersImport && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-2 text-[11px] text-emerald-800">
+            <Database size={12} />
+            <span className="font-semibold">CSV取込済み:</span>
+            <span className="font-mono">{ordersImport.fileName}</span>
+            <span className="text-emerald-700/70">
+              （売上・注文数・AOVを再計算 / 取込
+              {ordersImport.parseResult.acceptedRows.toLocaleString("ja-JP")}件）
+            </span>
+            <Link
+              to="/app/data-import"
+              className="ml-auto text-emerald-700 hover:text-emerald-900"
+            >
+              取込結果を見る →
+            </Link>
+          </div>
+        )}
+
         {/* KPI row */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           {kpis.map((k) => (
