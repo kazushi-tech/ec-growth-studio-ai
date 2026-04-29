@@ -28,7 +28,7 @@ import { useImport } from "../lib/csv/ImportContext";
 import { buildKpisFromImport } from "../lib/csv/buildKpis";
 
 export default function Dashboard() {
-  const { ordersImport } = useImport();
+  const { ordersImport, ga4Import, adsImport } = useImport();
   const top5 = actions.slice(0, 5);
   const kpis = ordersImport
     ? buildKpisFromImport(ordersImport.aggregation)
@@ -359,23 +359,51 @@ export default function Dashboard() {
             {[
               ordersImport
                 ? {
-                    name: "Shopify注文CSV",
+                    name: "注文CSV",
                     state: "取込済",
                     when: `${ordersImport.importedAt.toLocaleString("ja-JP")} / ${ordersImport.parseResult.acceptedRows.toLocaleString("ja-JP")}件`,
                     detail: ordersImport.fileName,
                     tone: "mint" as const,
                   }
                 : {
-                    name: "Shopify注文CSV",
+                    name: "注文CSV",
                     state: "未取込",
                     when: "未取込",
                     detail: undefined,
                     tone: "gold" as const,
                   },
-              { name: "商品CSV", state: "取込済", when: "最終: 4/30 08:30", detail: undefined, tone: "mint" as const },
-              { name: "広告CSV", state: "取込済", when: "最終: 4/30 08:30", detail: undefined, tone: "mint" as const },
-              { name: "GA4 CSV", state: "任意・未取込", when: "未取込", detail: undefined, tone: "gold" as const },
-              { name: "Shopify API", state: "任意・未接続", when: "未接続", detail: undefined, tone: "gold" as const },
+              ga4Import
+                ? {
+                    name: "GA4 CSV",
+                    state: "取込済",
+                    when: `${ga4Import.importedAt.toLocaleString("ja-JP")} / ${ga4Import.parseResult.acceptedRows.toLocaleString("ja-JP")}件`,
+                    detail: ga4Import.fileName,
+                    tone: "mint" as const,
+                  }
+                : {
+                    name: "GA4 CSV",
+                    state: "任意・未取込",
+                    when: "未取込",
+                    detail: undefined,
+                    tone: "gold" as const,
+                  },
+              adsImport
+                ? {
+                    name: "広告CSV",
+                    state: "取込済",
+                    when: `${adsImport.importedAt.toLocaleString("ja-JP")} / ${adsImport.parseResult.acceptedRows.toLocaleString("ja-JP")}件`,
+                    detail: adsImport.fileName,
+                    tone: "mint" as const,
+                  }
+                : {
+                    name: "広告CSV",
+                    state: "任意・未取込",
+                    when: "未取込",
+                    detail: undefined,
+                    tone: "gold" as const,
+                  },
+              { name: "Shopify Admin API", state: "Phase 4で対応", when: "未接続", detail: undefined, tone: "slate" as const },
+              { name: "BigQuery / GA4 API", state: "Phase 3で対応", when: "未接続", detail: undefined, tone: "slate" as const },
             ].map((d) => (
               <div key={d.name} className="rounded-xl border border-slate-100 p-3">
                 <div className="text-xs font-semibold text-slate-700">
