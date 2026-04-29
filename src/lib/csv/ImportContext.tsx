@@ -19,44 +19,93 @@ export type OrdersImport = {
   aggregation: OrderAggregation;
 };
 
+export type FailedImport = {
+  fileName: string;
+  attemptedAt: Date;
+  parseResult: ParseResult;
+};
+
+type ImportOutcome =
+  | { kind: "success"; import: OrdersImport }
+  | { kind: "failure"; failure: FailedImport };
+
 type ImportContextValue = {
   ordersImport: OrdersImport | null;
+  lastFailure: FailedImport | null;
   isImporting: boolean;
-  importOrdersFile: (file: File) => Promise<OrdersImport>;
+  importOrdersFile: (file: File) => Promise<ImportOutcome>;
   clearOrdersImport: () => void;
+  dismissFailure: () => void;
 };
 
 const ImportContext = createContext<ImportContextValue | null>(null);
 
 export function ImportProvider({ children }: { children: ReactNode }) {
   const [ordersImport, setOrdersImport] = useState<OrdersImport | null>(null);
+  const [lastFailure, setLastFailure] = useState<FailedImport | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
-  const importOrdersFile = useCallback(async (file: File) => {
-    setIsImporting(true);
-    try {
-      const parseResult = await parseOrdersCsv(file);
-      const aggregation = aggregateOrders(parseResult.rows);
-      const next: OrdersImport = {
-        fileName: file.name,
-        importedAt: new Date(),
-        parseResult,
-        aggregation,
-      };
-      setOrdersImport(next);
-      return next;
-    } finally {
-      setIsImporting(false);
-    }
-  }, []);
+  const importOrdersFile = useCallback(
+    async (file: File): Promise<ImportOutcome> => {
+      setIsImporting(true);
+      try {
+        const parseResult = await parseOrdersCsv(file);
+        // Treat any parse-level error (missing required column, empty CSV, etc.)
+        // as a failed import — do NOT overwrite a previously successful import,
+        // and do NOT publish zero-aggregation values to the dashboard.
+        if (parseResult.errors.length > 0) {
+          const failure: FailedImport = {
+            fileName: file.name,
+            attemptedAt: new Date(),
+            parseResult,
+          };
+          setLastFailure(failure);
+          return { kind: "failure", failure };
+        }
+
+        const aggregation = aggregateOrders(parseResult.rows);
+        const next: OrdersImport = {
+          fileName: file.name,
+          importedAt: new Date(),
+          parseResult,
+          aggregation,
+        };
+        setOrdersImport(next);
+        setLastFailure(null);
+        return { kind: "success", import: next };
+      } finally {
+        setIsImporting(false);
+      }
+    },
+    [],
+  );
 
   const clearOrdersImport = useCallback(() => {
     setOrdersImport(null);
+    setLastFailure(null);
+  }, []);
+
+  const dismissFailure = useCallback(() => {
+    setLastFailure(null);
   }, []);
 
   const value = useMemo<ImportContextValue>(
-    () => ({ ordersImport, isImporting, importOrdersFile, clearOrdersImport }),
-    [ordersImport, isImporting, importOrdersFile, clearOrdersImport],
+    () => ({
+      ordersImport,
+      lastFailure,
+      isImporting,
+      importOrdersFile,
+      clearOrdersImport,
+      dismissFailure,
+    }),
+    [
+      ordersImport,
+      lastFailure,
+      isImporting,
+      importOrdersFile,
+      clearOrdersImport,
+      dismissFailure,
+    ],
   );
 
   return (

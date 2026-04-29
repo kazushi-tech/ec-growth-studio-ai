@@ -55,8 +55,14 @@ const stateTone = (s: DataSource["status"]) => {
 };
 
 export default function DataImport() {
-  const { ordersImport, isImporting, importOrdersFile, clearOrdersImport } =
-    useImport();
+  const {
+    ordersImport,
+    lastFailure,
+    isImporting,
+    importOrdersFile,
+    clearOrdersImport,
+    dismissFailure,
+  } = useImport();
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -69,6 +75,7 @@ export default function DataImport() {
       setUploadError("CSVファイル(.csv)を選択してください。");
       return;
     }
+    if (fileRef.current) fileRef.current.value = "";
     try {
       await importOrdersFile(file);
     } catch (e) {
@@ -159,6 +166,86 @@ export default function DataImport() {
             />
           </div>
         </SectionCard>
+
+        {/* Failed import panel — shown when the most recent upload could not be applied */}
+        {lastFailure && (
+          <SectionCard
+            title="注文CSV 取込失敗"
+            icon={<XCircle size={16} className="text-rose-600" />}
+            action={
+              <button
+                onClick={dismissFailure}
+                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+              >
+                閉じる
+              </button>
+            }
+          >
+            <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3 text-[12px] text-rose-800">
+              <div className="flex flex-wrap items-center gap-2">
+                <Pill tone="rose" size="xs">
+                  反映なし
+                </Pill>
+                <span className="font-mono text-[11px]">{lastFailure.fileName}</span>
+                <span className="text-[11px] text-rose-700/70">
+                  {lastFailure.attemptedAt.toLocaleString("ja-JP")}
+                </span>
+              </div>
+              <p className="mt-2 leading-6">
+                CSVを解釈できなかったため、Dashboardには反映されていません。
+                {ordersImport
+                  ? "直前に成功した取込はそのまま維持されています。"
+                  : "未取込状態（サンプルデータ表示）のままです。"}
+              </p>
+            </div>
+
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              <MessageBlock
+                tone="rose"
+                title={`エラー (${lastFailure.parseResult.errors.length})`}
+                items={lastFailure.parseResult.errors.map((e) => e.message)}
+                icon={<XCircle size={13} />}
+              />
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+                <div className="font-semibold text-slate-700">検出されたカラム</div>
+                <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                  {Object.entries(lastFailure.parseResult.detectedColumns).map(
+                    ([k, v]) => (
+                      <li key={k} className="font-mono text-[10px]">
+                        {k}: {v ?? <span className="text-rose-500">未検出</span>}
+                      </li>
+                    ),
+                  )}
+                </ul>
+                <div className="mt-2 text-[10px] text-slate-500">
+                  受理した行数: {formatInt(lastFailure.parseResult.acceptedRows)} /{" "}
+                  {formatInt(lastFailure.parseResult.totalRows)}
+                </div>
+              </div>
+            </div>
+
+            {lastFailure.parseResult.warnings.length > 0 && (
+              <div className="mt-3">
+                <MessageBlock
+                  tone="amber"
+                  title={`警告 (${lastFailure.parseResult.warnings.length})`}
+                  items={lastFailure.parseResult.warnings
+                    .slice(0, 8)
+                    .map((w) =>
+                      w.field
+                        ? `行 ${w.row} [${w.field}]: ${w.message}`
+                        : `行 ${w.row}: ${w.message}`,
+                    )}
+                  icon={<AlertTriangle size={13} />}
+                  moreCount={Math.max(
+                    0,
+                    lastFailure.parseResult.warnings.length - 8,
+                  )}
+                />
+              </div>
+            )}
+          </SectionCard>
+        )}
 
         {/* Import result panel — visible only after a CSV is uploaded */}
         {ordersImport && (
