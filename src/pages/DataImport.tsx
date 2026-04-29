@@ -25,6 +25,7 @@ import { dataSources } from "../data/sample";
 import type { DataSource } from "../data/sample";
 import { useImport } from "../lib/csv/ImportContext";
 import { formatYen, formatInt } from "../lib/csv/aggregateOrders";
+import { formatPercent } from "../lib/csv/aggregateGa4";
 
 const sourceIcon = (name: string) => {
   if (name.includes("注文") || name.includes("商品データ"))
@@ -55,6 +56,8 @@ const stateTone = (s: DataSource["status"]) => {
   }
 };
 
+type CsvMode = "orders" | "ga4";
+
 export default function DataImport() {
   const {
     ordersImport,
@@ -63,10 +66,17 @@ export default function DataImport() {
     importOrdersFile,
     clearOrdersImport,
     dismissFailure,
+    ga4Import,
+    ga4Failure,
+    isImportingGa4,
+    importGa4File,
+    clearGa4Import,
+    dismissGa4Failure,
   } = useImport();
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [csvMode, setCsvMode] = useState<CsvMode>("orders");
 
   const handleFiles = async (files: FileList | null) => {
     setUploadError(null);
@@ -78,7 +88,11 @@ export default function DataImport() {
     }
     if (fileRef.current) fileRef.current.value = "";
     try {
-      await importOrdersFile(file);
+      if (csvMode === "ga4") {
+        await importGa4File(file);
+      } else {
+        await importOrdersFile(file);
+      }
     } catch (e) {
       setUploadError(
         `読み込み中にエラーが発生しました: ${e instanceof Error ? e.message : String(e)}`,
@@ -251,8 +265,18 @@ export default function DataImport() {
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
             <SummaryItem
               label="接続済みデータ"
-              value={ordersImport ? "7" : "6"}
-              sub={ordersImport ? "CSV取込 +1" : "前月比 +1"}
+              value={String(
+                6 + (ordersImport ? 1 : 0) + (ga4Import ? 1 : 0),
+              )}
+              sub={
+                ordersImport && ga4Import
+                  ? "注文CSV / GA4 CSV 取込済み"
+                  : ordersImport
+                    ? "注文CSV 取込済み"
+                    : ga4Import
+                      ? "GA4 CSV 取込済み"
+                      : "前月比 +1"
+              }
               tone="emerald"
             />
             <SummaryItem
@@ -263,28 +287,24 @@ export default function DataImport() {
             />
             <SummaryItem
               label="最新取込"
-              value={
-                ordersImport
-                  ? ordersImport.importedAt.toLocaleString("ja-JP")
-                  : "2026/04/29 09:42"
-              }
-              sub={
-                ordersImport
-                  ? `ファイル: ${ordersImport.fileName}`
-                  : "前回: 2026/04/28 18:31"
-              }
+              value={latestImportLabel(ordersImport, ga4Import)}
+              sub={latestImportSub(ordersImport, ga4Import)}
             />
             <SummaryItem
               label="AI診断データ充足率"
-              value="78%"
-              sub="前月比 +8pt"
+              value={ga4Import ? "84%" : "78%"}
+              sub={ga4Import ? "GA4取込で +6pt" : "前月比 +8pt"}
               tone="emerald"
-              progress={78}
+              progress={ga4Import ? 84 : 78}
             />
             <SummaryItem
               label="今月の診断ステータス"
               value="診断可能"
-              sub="全体の78%のデータを確保"
+              sub={
+                ga4Import
+                  ? "GA4実値で要因分析が精度向上"
+                  : "全体の78%のデータを確保"
+              }
               tone="emerald"
             />
           </div>
@@ -499,6 +519,307 @@ export default function DataImport() {
           </SectionCard>
         )}
 
+        {/* GA4 CSV failure panel */}
+        {ga4Failure && (
+          <SectionCard
+            title="GA4 CSV 取込失敗"
+            icon={<XCircle size={16} className="text-rose-600" />}
+            action={
+              <button
+                onClick={dismissGa4Failure}
+                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+              >
+                閉じる
+              </button>
+            }
+          >
+            <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3 text-[12px] text-rose-800">
+              <div className="flex flex-wrap items-center gap-2">
+                <Pill tone="rose" size="xs">
+                  反映なし
+                </Pill>
+                <span className="font-mono text-[11px]">{ga4Failure.fileName}</span>
+                <span className="text-[11px] text-rose-700/70">
+                  {ga4Failure.attemptedAt.toLocaleString("ja-JP")}
+                </span>
+              </div>
+              <p className="mt-2 leading-6">
+                GA4 CSVを解釈できなかったため、売上要因分析のセッション/CVRには反映されていません。
+                {ga4Import
+                  ? "直前に成功したGA4取込はそのまま維持されています。"
+                  : "GA4未取込状態（静的サンプル表示）のままです。"}
+              </p>
+            </div>
+
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              <MessageBlock
+                tone="rose"
+                title={`エラー (${ga4Failure.parseResult.errors.length})`}
+                items={ga4Failure.parseResult.errors.map((e) => e.message)}
+                icon={<XCircle size={13} />}
+              />
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+                <div className="font-semibold text-slate-700">検出されたカラム</div>
+                <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                  {Object.entries(ga4Failure.parseResult.detectedColumns).map(
+                    ([k, v]) => (
+                      <li key={k} className="font-mono text-[10px]">
+                        {k}: {v ?? <span className="text-rose-500">未検出</span>}
+                      </li>
+                    ),
+                  )}
+                </ul>
+                <div className="mt-2 text-[10px] text-slate-500">
+                  受理した行数: {formatInt(ga4Failure.parseResult.acceptedRows)} /{" "}
+                  {formatInt(ga4Failure.parseResult.totalRows)}
+                </div>
+              </div>
+            </div>
+
+            {ga4Failure.parseResult.warnings.length > 0 && (
+              <div className="mt-3">
+                <MessageBlock
+                  tone="amber"
+                  title={`警告 (${ga4Failure.parseResult.warnings.length})`}
+                  items={ga4Failure.parseResult.warnings
+                    .slice(0, 8)
+                    .map((w) =>
+                      w.field
+                        ? `行 ${w.row} [${w.field}]: ${w.message}`
+                        : `行 ${w.row}: ${w.message}`,
+                    )}
+                  icon={<AlertTriangle size={13} />}
+                  moreCount={Math.max(
+                    0,
+                    ga4Failure.parseResult.warnings.length - 8,
+                  )}
+                />
+              </div>
+            )}
+          </SectionCard>
+        )}
+
+        {/* GA4 CSV import result */}
+        {ga4Import && (
+          <SectionCard
+            title="GA4 CSV 取込結果"
+            icon={<BarChart3 size={16} className="text-sky-600" />}
+            action={
+              <button
+                onClick={clearGa4Import}
+                className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+              >
+                <RefreshCw size={12} /> GA4取込を解除
+              </button>
+            }
+          >
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+              <SummaryItem
+                label="セッション数"
+                value={formatInt(ga4Import.aggregation.totalSessions)}
+                sub={`期間: ${formatPeriod(ga4Import.aggregation.periodStart, ga4Import.aggregation.periodEnd)}`}
+                tone="emerald"
+              />
+              <SummaryItem
+                label="ユーザー数"
+                value={
+                  ga4Import.aggregation.totalUsers === null
+                    ? "—"
+                    : formatInt(ga4Import.aggregation.totalUsers)
+                }
+                sub={
+                  ga4Import.aggregation.totalUsers === null
+                    ? "users 列なし"
+                    : "users 合計"
+                }
+                tone={
+                  ga4Import.aggregation.totalUsers === null
+                    ? undefined
+                    : "emerald"
+                }
+              />
+              <SummaryItem
+                label="購入数"
+                value={
+                  ga4Import.aggregation.totalPurchases === null
+                    ? "—"
+                    : formatInt(ga4Import.aggregation.totalPurchases)
+                }
+                sub={
+                  ga4Import.aggregation.totalPurchases === null
+                    ? "purchases 列なし"
+                    : "transactions / purchases 合計"
+                }
+                tone={
+                  ga4Import.aggregation.totalPurchases === null
+                    ? undefined
+                    : "emerald"
+                }
+              />
+              <SummaryItem
+                label="CVR"
+                value={
+                  ga4Import.aggregation.cvr === null
+                    ? "—"
+                    : formatPercent(ga4Import.aggregation.cvr)
+                }
+                sub="purchases ÷ sessions"
+                tone={
+                  ga4Import.aggregation.cvr === null ? undefined : "emerald"
+                }
+              />
+              <SummaryItem
+                label="GA4売上"
+                value={
+                  ga4Import.aggregation.totalRevenue === null
+                    ? "—"
+                    : formatYen(ga4Import.aggregation.totalRevenue)
+                }
+                sub={
+                  ga4Import.aggregation.totalRevenue === null
+                    ? "total_revenue 列なし"
+                    : "GA4 計測値"
+                }
+                tone={
+                  ga4Import.aggregation.totalRevenue === null
+                    ? undefined
+                    : "emerald"
+                }
+              />
+            </div>
+
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              <div>
+                <div className="text-[11px] font-semibold text-slate-700">
+                  上位チャネル
+                </div>
+                {ga4Import.aggregation.hasChannel ? (
+                  <table className="table-clean mt-1.5">
+                    <thead>
+                      <tr>
+                        <th>チャネル</th>
+                        <th className="!w-24">セッション</th>
+                        <th className="!w-20">購入</th>
+                        <th className="!w-20">CVR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ga4Import.aggregation.topChannels.map((c) => (
+                        <tr key={c.channel}>
+                          <td className="font-medium text-slate-800">
+                            {c.channel}
+                          </td>
+                          <td className="text-slate-600">
+                            {formatInt(c.sessions)}
+                          </td>
+                          <td className="text-slate-600">
+                            {formatInt(c.purchases)}
+                          </td>
+                          <td className="text-slate-700">
+                            {formatPercent(c.cvr)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="mt-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-2 text-[11px] text-slate-500">
+                    channel 列が見当たらないため集計できません。
+                  </div>
+                )}
+
+                <div className="mt-3 text-[11px] font-semibold text-slate-700">
+                  上位ランディングページ
+                </div>
+                {ga4Import.aggregation.hasLandingPage ? (
+                  <table className="table-clean mt-1.5">
+                    <thead>
+                      <tr>
+                        <th>LP</th>
+                        <th className="!w-24">セッション</th>
+                        <th className="!w-20">購入</th>
+                        <th className="!w-20">CVR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ga4Import.aggregation.topLandingPages.map((lp) => (
+                        <tr key={lp.landing_page}>
+                          <td className="font-mono text-[11px] text-slate-800">
+                            {lp.landing_page}
+                          </td>
+                          <td className="text-slate-600">
+                            {formatInt(lp.sessions)}
+                          </td>
+                          <td className="text-slate-600">
+                            {formatInt(lp.purchases)}
+                          </td>
+                          <td className="text-slate-700">
+                            {formatPercent(lp.cvr)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="mt-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-2 text-[11px] text-slate-500">
+                    landing_page 列が見当たらないため集計できません。
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                {ga4Import.parseResult.warnings.length > 0 ? (
+                  <MessageBlock
+                    tone="amber"
+                    title={`警告 (${ga4Import.parseResult.warnings.length})`}
+                    items={ga4Import.parseResult.warnings
+                      .slice(0, 8)
+                      .map((w) =>
+                        w.field
+                          ? `行 ${w.row} [${w.field}]: ${w.message}`
+                          : `行 ${w.row}: ${w.message}`,
+                      )}
+                    icon={<AlertTriangle size={13} />}
+                    moreCount={Math.max(
+                      0,
+                      ga4Import.parseResult.warnings.length - 8,
+                    )}
+                  />
+                ) : (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-[11px] text-emerald-700">
+                    警告・エラーなしで取込完了しました。
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+                  <div className="font-semibold text-slate-700">
+                    検出されたカラム
+                  </div>
+                  <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                    {Object.entries(ga4Import.parseResult.detectedColumns).map(
+                      ([k, v]) => (
+                        <li key={k} className="font-mono text-[10px]">
+                          {k}:{" "}
+                          {v ?? <span className="text-rose-500">未検出</span>}
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                  <div className="mt-2 text-[10px] text-slate-500">
+                    受理した行数: {formatInt(ga4Import.parseResult.acceptedRows)} /{" "}
+                    {formatInt(ga4Import.parseResult.totalRows)}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-sky-200 bg-sky-50/40 p-3 text-[11px] text-slate-700">
+                  GA4 CSV はメモリ／ブラウザ保存のみで処理しています。
+                  外部送信なし。BigQuery 直接接続は次フェーズです。
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+        )}
+
         {/* Two cols: data source list / AI diagnosis influence */}
         <div className="grid gap-5 lg:grid-cols-3">
           <SectionCard
@@ -520,30 +841,47 @@ export default function DataImport() {
                 </tr>
               </thead>
               <tbody>
-                {dataSources.map((d) => (
-                  <tr key={d.name}>
-                    <td>
-                      <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                        {sourceIcon(d.name)}
-                        {d.name}
-                      </div>
-                    </td>
-                    <td>
-                      <Pill tone={stateTone(d.status)} size="xs">
-                        {d.status}
-                      </Pill>
-                    </td>
-                    <td className="text-slate-600">{d.method}</td>
-                    <td className="text-slate-500">{d.updated}</td>
-                    <td className="text-slate-700">{d.count}</td>
-                    <td className="text-slate-500">{d.impact}</td>
-                    <td>
-                      <button className="text-xs text-sky-600 hover:text-sky-700">
-                        {d.action}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {dataSources.map((d) => {
+                  const isGa4 = d.name.includes("GA4");
+                  const status: DataSource["status"] =
+                    isGa4 && ga4Import ? "取込済み" : d.status;
+                  const updated =
+                    isGa4 && ga4Import
+                      ? ga4Import.importedAt.toLocaleDateString("ja-JP")
+                      : d.updated;
+                  const count =
+                    isGa4 && ga4Import
+                      ? `${formatInt(ga4Import.parseResult.acceptedRows)}行`
+                      : d.count;
+                  const impact =
+                    isGa4 && ga4Import
+                      ? "セッション/CVRを実値で反映中"
+                      : d.impact;
+                  return (
+                    <tr key={d.name}>
+                      <td>
+                        <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                          {sourceIcon(d.name)}
+                          {d.name}
+                        </div>
+                      </td>
+                      <td>
+                        <Pill tone={stateTone(status)} size="xs">
+                          {status}
+                        </Pill>
+                      </td>
+                      <td className="text-slate-600">{d.method}</td>
+                      <td className="text-slate-500">{updated}</td>
+                      <td className="text-slate-700">{count}</td>
+                      <td className="text-slate-500">{impact}</td>
+                      <td>
+                        <button className="text-xs text-sky-600 hover:text-sky-700">
+                          {d.action}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             <p className="mt-2 px-3 pb-1 text-[10px] text-slate-400">
@@ -612,6 +950,33 @@ export default function DataImport() {
             title="CSVアップロード"
             icon={<Upload size={16} />}
           >
+            <div className="mb-3 flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white p-1 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setCsvMode("orders")}
+                className={`flex-1 rounded-md px-2 py-1.5 font-medium transition-colors ${
+                  csvMode === "orders"
+                    ? "bg-navy-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <ShoppingBag size={12} className="mr-1 inline" />
+                注文CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => setCsvMode("ga4")}
+                className={`flex-1 rounded-md px-2 py-1.5 font-medium transition-colors ${
+                  csvMode === "ga4"
+                    ? "bg-navy-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <BarChart3 size={12} className="mr-1 inline" />
+                GA4 CSV
+              </button>
+            </div>
+
             <div
               onDragOver={(e) => {
                 e.preventDefault();
@@ -628,29 +993,31 @@ export default function DataImport() {
             >
               <Cloud size={28} className="mx-auto text-slate-400" />
               <div className="mt-2 text-sm font-semibold text-slate-700">
-                {isImporting
+                {isImporting || isImportingGa4
                   ? "読み込み中..."
-                  : "CSVファイルをドラッグ＆ドロップ"}
+                  : csvMode === "ga4"
+                    ? "GA4 CSV をドラッグ＆ドロップ"
+                    : "注文CSV をドラッグ＆ドロップ"}
               </div>
               <div className="text-[11px] text-slate-500">
                 またはクリックしてファイルを選択
               </div>
               <div className="mt-3 flex flex-wrap justify-center gap-1.5">
                 {[
-                  "注文CSV",
-                  "商品CSV",
-                  "在庫CSV",
-                  "レビューCSV",
-                  "広告CSV",
-                  "GA4 CSV",
-                  "CRM CSV",
+                  { label: "注文CSV", active: csvMode === "orders" },
+                  { label: "GA4 CSV", active: csvMode === "ga4" },
+                  { label: "商品CSV", active: false },
+                  { label: "在庫CSV", active: false },
+                  { label: "レビューCSV", active: false },
+                  { label: "広告CSV", active: false },
+                  { label: "CRM CSV", active: false },
                 ].map((t) => (
                   <Pill
-                    key={t}
-                    tone={t === "注文CSV" ? "mint" : "slate"}
+                    key={t.label}
+                    tone={t.active ? "mint" : "slate"}
                     size="xs"
                   >
-                    {t}
+                    {t.label}
                   </Pill>
                 ))}
               </div>
@@ -661,17 +1028,31 @@ export default function DataImport() {
                     e.stopPropagation();
                     triggerSelect();
                   }}
-                  disabled={isImporting}
+                  disabled={isImporting || isImportingGa4}
                 >
-                  <Upload size={12} /> CSVをアップロード
+                  <Upload size={12} />{" "}
+                  {csvMode === "ga4"
+                    ? "GA4 CSV をアップロード"
+                    : "注文CSV をアップロード"}
                 </button>
                 <a
-                  href="/samples/orders_sample.csv"
-                  download="orders_sample.csv"
+                  href={
+                    csvMode === "ga4"
+                      ? "/samples/ga4_sample.csv"
+                      : "/samples/orders_sample.csv"
+                  }
+                  download={
+                    csvMode === "ga4"
+                      ? "ga4_sample.csv"
+                      : "orders_sample.csv"
+                  }
                   className="btn-secondary px-3 py-1.5 text-xs"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Download size={12} /> CSVテンプレートを取得
+                  <Download size={12} />{" "}
+                  {csvMode === "ga4"
+                    ? "GA4 CSVテンプレートを取得"
+                    : "注文CSVテンプレートを取得"}
                 </a>
               </div>
               {uploadError && (
@@ -681,31 +1062,62 @@ export default function DataImport() {
               )}
             </div>
 
-            <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
-              <div className="font-semibold text-slate-700">
-                注文CSVテンプレート（最小カラム）
+            {csvMode === "orders" ? (
+              <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+                <div className="font-semibold text-slate-700">
+                  注文CSVテンプレート（最小カラム）
+                </div>
+                <ul className="mt-1.5 space-y-0.5">
+                  <li>
+                    <span className="font-mono text-[10px]">order_id</span> — 注文番号（必須）
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">order_date</span> — 注文日 / date / 注文日（YYYY-MM-DD）
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">customer_id</span> — 顧客ID（任意・リピート分析に使用）
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">product_name</span> — 商品名 / product / 商品名
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">quantity</span> — 数量 / qty
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">total_sales</span> — total / sales / 売上（税込・¥可）
+                  </li>
+                </ul>
               </div>
-              <ul className="mt-1.5 space-y-0.5">
-                <li>
-                  <span className="font-mono text-[10px]">order_id</span> — 注文番号（必須）
-                </li>
-                <li>
-                  <span className="font-mono text-[10px]">order_date</span> — 注文日 / date / 注文日（YYYY-MM-DD）
-                </li>
-                <li>
-                  <span className="font-mono text-[10px]">customer_id</span> — 顧客ID（任意・リピート分析に使用）
-                </li>
-                <li>
-                  <span className="font-mono text-[10px]">product_name</span> — 商品名 / product / 商品名
-                </li>
-                <li>
-                  <span className="font-mono text-[10px]">quantity</span> — 数量 / qty
-                </li>
-                <li>
-                  <span className="font-mono text-[10px]">total_sales</span> — total / sales / 売上（税込・¥可）
-                </li>
-              </ul>
-            </div>
+            ) : (
+              <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+                <div className="font-semibold text-slate-700">
+                  GA4 CSVテンプレート（最小カラム）
+                </div>
+                <ul className="mt-1.5 space-y-0.5">
+                  <li>
+                    <span className="font-mono text-[10px]">date</span> — 日付（必須） / event_date / 日付
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">sessions</span> — セッション数（必須） / セッション
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">users</span> — ユーザー数（任意） / active_users
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">purchases</span> — 購入数（任意・CVRに使用） / transactions / 購入
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">total_revenue</span> — GA4売上（任意） / revenue
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">channel</span> — チャネル（任意） / session_default_channel_group / 流入元
+                  </li>
+                  <li>
+                    <span className="font-mono text-[10px]">landing_page</span> — LP（任意） / page_path / ランディングページ
+                  </li>
+                </ul>
+              </div>
+            )}
           </SectionCard>
 
           <SectionCard
@@ -850,6 +1262,33 @@ function formatPeriod(start: Date | null, end: Date | null): string {
   const fmt = (d: Date) =>
     `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
   return `${fmt(start)} 〜 ${fmt(end)}`;
+}
+
+function latestImportLabel(
+  orders: { importedAt: Date } | null,
+  ga4: { importedAt: Date } | null,
+): string {
+  const t =
+    orders && ga4
+      ? orders.importedAt.getTime() >= ga4.importedAt.getTime()
+        ? orders.importedAt
+        : ga4.importedAt
+      : (orders?.importedAt ?? ga4?.importedAt ?? null);
+  return t ? t.toLocaleString("ja-JP") : "2026/04/29 09:42";
+}
+
+function latestImportSub(
+  orders: { fileName: string; importedAt: Date } | null,
+  ga4: { fileName: string; importedAt: Date } | null,
+): string {
+  if (orders && ga4) {
+    const newer =
+      orders.importedAt.getTime() >= ga4.importedAt.getTime() ? orders : ga4;
+    return `ファイル: ${newer.fileName}`;
+  }
+  if (orders) return `ファイル: ${orders.fileName}`;
+  if (ga4) return `ファイル: ${ga4.fileName}`;
+  return "前回: 2026/04/28 18:31";
 }
 
 function MessageBlock({

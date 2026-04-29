@@ -14,6 +14,7 @@ import {
   Compass,
   ArrowRight,
   ChevronRight,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
@@ -25,12 +26,16 @@ import Pill, {
 } from "../components/ui/Pill";
 import {
   revenueAnalysis,
+  type RevenueAnalysis as RevenueAnalysisModel,
   type RevenueCause,
   type RevenueDataReadiness,
   type RevenueFactor,
   type RevenueFactorKey,
   type RevenueNextAction,
 } from "../data/sample";
+import { useImport } from "../lib/csv/ImportContext";
+import type { Ga4Aggregation } from "../lib/csv/aggregateGa4";
+import type { OrderAggregation } from "../lib/csv/aggregateOrders";
 
 const factorIcon: Record<RevenueFactorKey, LucideIcon> = {
   sessions: MousePointer,
@@ -63,41 +68,320 @@ const sendToTone: Record<RevenueNextAction["sendTo"], "navy" | "violet"> = {
   AI考察レポート: "violet",
 };
 
-const intentTextClass: Record<
-  RevenueFactor["changeIntent"],
-  string
-> = {
+const intentTextClass: Record<RevenueFactor["changeIntent"], string> = {
   positive: "text-emerald-600",
   negative: "text-rose-600",
   neutral: "text-slate-500",
 };
 
-const intentBarClass: Record<
-  RevenueFactor["changeIntent"],
-  string
-> = {
+const intentBarClass: Record<RevenueFactor["changeIntent"], string> = {
   positive: "bg-emerald-500",
   negative: "bg-rose-500",
   neutral: "bg-slate-400",
 };
 
-function formatYen(n: number): string {
+function formatYenSigned(n: number): string {
   const sign = n > 0 ? "+" : n < 0 ? "−" : "";
-  return `${sign}¥${Math.abs(n).toLocaleString("ja-JP")}`;
+  return `${sign}¥${Math.abs(Math.round(n)).toLocaleString("ja-JP")}`;
 }
 
 function formatYenAbs(n: number): string {
-  return `¥${Math.abs(n).toLocaleString("ja-JP")}`;
+  return `¥${Math.abs(Math.round(n)).toLocaleString("ja-JP")}`;
 }
 
-export default function RevenueAnalysis() {
-  const r = revenueAnalysis;
-  const HeadIcon = r.intent === "negative" ? TrendingDown : TrendingUp;
-  const headIconClass =
-    r.intent === "negative" ? "text-rose-600" : "text-emerald-600";
-  const diffTextClass = intentTextClass[r.intent];
+function formatInt(n: number): string {
+  return Math.round(n).toLocaleString("ja-JP");
+}
 
-  const maxAbsImpact = Math.max(...r.factors.map((f) => Math.abs(f.impactYen)));
+function formatPercent(ratio: number, digits = 2): string {
+  return `${(ratio * 100).toFixed(digits)}%`;
+}
+
+// --- Sample-string parsers (revenueAnalysis stores prev/curr as display strings) ---
+function parseSessionsString(s: string): number {
+  return Number(s.replace(/[, ]/g, ""));
+}
+function parsePercentString(s: string): number {
+  return Number(s.replace(/%/g, "").trim()) / 100;
+}
+function parseYenString(s: string): number {
+  return Number(s.replace(/[¥, ]/g, ""));
+}
+
+type FactorMode = "sample" | "ga4" | "orders";
+type ResolvedFactor = {
+  factor: RevenueFactor;
+  source: FactorMode;
+};
+
+// Build effective factors using ga4 (for sessions / cvr) and orders (for aov)
+// when available. Falls back to the static sample for the curr value otherwise.
+// prev values always come from the static sample because the prototype does
+// not have last-month data ingestion.
+function resolveFactors(
+  base: RevenueAnalysisModel,
+  ga4: Ga4Aggregation | null,
+  orders: OrderAggregation | null,
+): {
+  factors: RevenueFactor[];
+  sources: Record<RevenueFactorKey, FactorMode>;
+  prevRevenue: number;
+  currRevenue: number;
+  diffYen: number;
+  diffPercent: string;
+  intent: "positive" | "negative" | "neutral";
+} {
+  const sampleSessions = base.factors.find((f) => f.key === "sessions")!;
+  const sampleCvr = base.factors.find((f) => f.key === "cvr")!;
+  const sampleAov = base.factors.find((f) => f.key === "aov")!;
+
+  const Sprev = parseSessionsString(sampleSessions.prevValue);
+  const Cprev = parsePercentString(sampleCvr.prevValue);
+  const Aprev = parseYenString(sampleAov.prevValue);
+
+  const sampleScurr = parseSessionsString(sampleSessions.currValue);
+  const sampleCcurr = parsePercentString(sampleCvr.currValue);
+  const sampleAcurr = parseYenString(sampleAov.currValue);
+
+  const sources: Record<RevenueFactorKey, FactorMode> = {
+    sessions: "sample",
+    cvr: "sample",
+    aov: "sample",
+  };
+
+  let Scurr = sampleScurr;
+  if (ga4 && ga4.totalSessions > 0) {
+    Scurr = ga4.totalSessions;
+    sources.sessions = "ga4";
+  }
+
+  let Ccurr = sampleCcurr;
+  if (ga4 && ga4.cvr !== null) {
+    Ccurr = ga4.cvr;
+    sources.cvr = "ga4";
+  }
+
+  let Acurr = sampleAcurr;
+  if (orders && orders.aov > 0) {
+    Acurr = orders.aov;
+    sources.aov = "orders";
+  }
+
+  const prevRevenue = Sprev * Cprev * Aprev;
+  const currRevenue = Scurr * Ccurr * Acurr;
+  const diffYen = currRevenue - prevRevenue;
+
+  // Chained decomposition so the three factor impacts sum exactly to diffYen.
+  const impactSessions = (Scurr - Sprev) * Cprev * Aprev;
+  const impactCvr = Scurr * (Ccurr - Cprev) * Aprev;
+  const impactAov = Scurr * Ccurr * (Acurr - Aprev);
+
+  const sessionsChangeRatio = Sprev === 0 ? 0 : (Scurr - Sprev) / Sprev;
+  const cvrChangePoints = Ccurr - Cprev; // in absolute ratio
+  const cvrChangeRatio = Cprev === 0 ? 0 : cvrChangePoints / Cprev;
+  const aovChangeRatio = Aprev === 0 ? 0 : (Acurr - Aprev) / Aprev;
+
+  const sessionsIntent: RevenueFactor["changeIntent"] =
+    Math.abs(Scurr - Sprev) < 1
+      ? "neutral"
+      : Scurr > Sprev
+        ? "positive"
+        : "negative";
+  const cvrIntent: RevenueFactor["changeIntent"] =
+    Math.abs(cvrChangePoints) < 0.0001
+      ? "neutral"
+      : Ccurr > Cprev
+        ? "positive"
+        : "negative";
+  const aovIntent: RevenueFactor["changeIntent"] =
+    Math.abs(Acurr - Aprev) < 1
+      ? "neutral"
+      : Acurr > Aprev
+        ? "positive"
+        : "negative";
+
+  const factors: RevenueFactor[] = [
+    {
+      key: "sessions",
+      label: sampleSessions.label,
+      unit: sampleSessions.unit,
+      prevValue: formatInt(Sprev),
+      currValue: formatInt(Scurr),
+      changeLabel: `${sessionsChangeRatio >= 0 ? "+" : ""}${(sessionsChangeRatio * 100).toFixed(1)}%`,
+      changeIntent: sessionsIntent,
+      impactYen: impactSessions,
+      impactLabel: formatYenSigned(impactSessions),
+      driverNote:
+        sources.sessions === "ga4"
+          ? `GA4 CSV から実値を反映。${ga4?.hasChannel ? "上位チャネルの動きが流入変動の中心。" : "チャネル列なしのため全体集計のみ。"}`
+          : sampleSessions.driverNote,
+    },
+    {
+      key: "cvr",
+      label: sampleCvr.label,
+      unit: sampleCvr.unit,
+      prevValue: formatPercent(Cprev),
+      currValue: formatPercent(Ccurr),
+      changeLabel: `${cvrChangePoints >= 0 ? "+" : ""}${(cvrChangePoints * 100).toFixed(2)}pt（${cvrChangeRatio >= 0 ? "+" : ""}${(cvrChangeRatio * 100).toFixed(1)}%）`,
+      changeIntent: cvrIntent,
+      impactYen: impactCvr,
+      impactLabel: formatYenSigned(impactCvr),
+      driverNote:
+        sources.cvr === "ga4"
+          ? `GA4 CSV の purchases / sessions から実値を反映。${ga4?.hasLandingPage ? "LP別CVR の精査で要因をさらに絞り込み可能。" : ""}`
+          : sampleCvr.driverNote,
+    },
+    {
+      key: "aov",
+      label: sampleAov.label,
+      unit: sampleAov.unit,
+      prevValue: formatYenAbs(Aprev),
+      currValue: formatYenAbs(Acurr),
+      changeLabel: `${aovChangeRatio >= 0 ? "+" : ""}${(aovChangeRatio * 100).toFixed(1)}%`,
+      changeIntent: aovIntent,
+      impactYen: impactAov,
+      impactLabel: formatYenSigned(impactAov),
+      driverNote:
+        sources.aov === "orders"
+          ? "注文CSV の 売上合計 ÷ 注文数 から実値を反映。"
+          : sampleAov.driverNote,
+    },
+  ];
+
+  const intent: "positive" | "negative" | "neutral" =
+    Math.abs(diffYen) < 1 ? "neutral" : diffYen > 0 ? "positive" : "negative";
+
+  const diffPercent = `${diffYen >= 0 ? "+" : ""}${prevRevenue === 0 ? 0 : ((diffYen / prevRevenue) * 100).toFixed(1)}%`;
+
+  return {
+    factors,
+    sources,
+    prevRevenue,
+    currRevenue,
+    diffYen,
+    diffPercent,
+    intent,
+  };
+}
+
+// Rule-based primary-driver text. Picks the factor whose impact moves revenue
+// most against the user's interest (negative when total diff is negative,
+// positive contributor when diff is positive).
+function buildHeadline(
+  diffYen: number,
+  diffPercent: string,
+  factors: RevenueFactor[],
+): { primaryDriver: string; headline: string } {
+  const sorted = [...factors].sort((a, b) =>
+    diffYen >= 0 ? b.impactYen - a.impactYen : a.impactYen - b.impactYen,
+  );
+  const worst = sorted[0];
+
+  const driverByKey: Record<RevenueFactorKey, { neg: string; pos: string }> = {
+    sessions: {
+      neg: "セッション数が縮小しており、流入チャネル（広告/SEO等）の見直しが主因候補。",
+      pos: "セッション数の伸長が売上を押し上げる主導要因。",
+    },
+    cvr: {
+      neg: "CVRが低下しており、商品ページ・カート/決済導線の見直しが主因候補。",
+      pos: "CVRの改善が売上の押し上げに寄与している。",
+    },
+    aov: {
+      neg: "AOVが低下しており、オファー設計や単価ミックスの見直しが主因候補。",
+      pos: "AOVの改善が売上を押し上げる要因として寄与。",
+    },
+  };
+
+  const phrase =
+    diffYen >= 0
+      ? driverByKey[worst.key].pos
+      : driverByKey[worst.key].neg;
+
+  const summarized = sorted
+    .slice(0, 2)
+    .map((f) => `${f.label} ${f.impactLabel}`)
+    .join(" / ");
+
+  const headline =
+    diffYen >= 0
+      ? `売上は前月比 ${diffPercent}（${formatYenSigned(diffYen)}）。${summarized} が押し上げの中心。`
+      : `売上は前月比 ${diffPercent}（${formatYenSigned(diffYen)}）。${summarized} が低下の主因候補。`;
+
+  return { primaryDriver: phrase, headline };
+}
+
+function adjustReadiness(
+  base: RevenueDataReadiness[],
+  ga4Connected: boolean,
+  ordersConnected: boolean,
+): RevenueDataReadiness[] {
+  return base.map((d) => {
+    if (d.label.includes("GA4") && ga4Connected) {
+      return {
+        ...d,
+        state: "取込済み",
+        note: "GA4 CSV を取込済み。セッション数・CVR・チャネル別の実値で要因分解中。",
+      };
+    }
+    if (d.label.includes("注文") && ordersConnected) {
+      return {
+        ...d,
+        state: "取込済み",
+        note: "注文CSV を取込済み。売上 / 注文数 / AOV を実値で確定。",
+      };
+    }
+    return d;
+  });
+}
+
+const sourcePillTone: Record<FactorMode, "mint" | "sky" | "slate"> = {
+  ga4: "sky",
+  orders: "mint",
+  sample: "slate",
+};
+
+const sourcePillLabel: Record<FactorMode, string> = {
+  ga4: "GA4実値",
+  orders: "注文CSV実値",
+  sample: "推定値",
+};
+
+export default function RevenueAnalysis() {
+  const { ga4Import, ordersImport } = useImport();
+  const base = revenueAnalysis;
+
+  const ga4Agg = ga4Import?.aggregation ?? null;
+  const ordersAgg = ordersImport?.aggregation ?? null;
+
+  const resolved = resolveFactors(base, ga4Agg, ordersAgg);
+  const adjusted =
+    resolved.sources.sessions !== "sample" ||
+    resolved.sources.cvr !== "sample" ||
+    resolved.sources.aov !== "sample";
+
+  const { primaryDriver, headline } = adjusted
+    ? buildHeadline(resolved.diffYen, resolved.diffPercent, resolved.factors)
+    : { primaryDriver: base.primaryDriver, headline: base.headline };
+
+  const factors = adjusted ? resolved.factors : base.factors;
+  const prevRevenue = adjusted ? resolved.prevRevenue : base.prevRevenue;
+  const currRevenue = adjusted ? resolved.currRevenue : base.currRevenue;
+  const diffYen = adjusted ? resolved.diffYen : base.diffYen;
+  const diffPercent = adjusted ? resolved.diffPercent : base.diffPercent;
+  const intent = adjusted ? resolved.intent : base.intent;
+
+  const dataReadiness = adjustReadiness(
+    base.dataReadiness,
+    !!ga4Import,
+    !!ordersImport,
+  );
+
+  const HeadIcon = intent === "negative" ? TrendingDown : TrendingUp;
+  const headIconClass =
+    intent === "negative" ? "text-rose-600" : "text-emerald-600";
+  const diffTextClass = intentTextClass[intent];
+
+  const maxAbsImpact = Math.max(...factors.map((f) => Math.abs(f.impactYen)));
 
   return (
     <>
@@ -123,13 +407,34 @@ export default function RevenueAnalysis() {
       />
 
       <div className="space-y-5 px-6 py-5">
+        {/* Real-data status banner */}
+        {(ga4Import || ordersImport) && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-2.5 text-[12px] text-emerald-800">
+            <BarChart3 size={14} className="text-emerald-600" />
+            <span className="font-semibold">CSV実値で反映中</span>
+            {ordersImport && (
+              <Pill tone="mint" size="xs">
+                注文CSV: {ordersImport.fileName}
+              </Pill>
+            )}
+            {ga4Import && (
+              <Pill tone="sky" size="xs">
+                GA4 CSV: {ga4Import.fileName}
+              </Pill>
+            )}
+            <span className="ml-auto text-[11px] text-emerald-700/80">
+              前月値は推定（静的サンプル）/ 今月値はCSVから算出
+            </span>
+          </div>
+        )}
+
         {/* Hero summary */}
         <SectionCard
           title="今月の売上変動サマリー"
           icon={<HeadIcon size={16} className={headIconClass} />}
           action={
             <span className="text-[11px] text-slate-500">
-              {r.prevMonth} → {r.month}
+              {base.prevMonth} → {base.month}
             </span>
           }
         >
@@ -137,10 +442,10 @@ export default function RevenueAnalysis() {
             <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
               <div className="text-[11px] text-slate-500">売上差分</div>
               <div className={`mt-1 text-3xl font-semibold tracking-tight ${diffTextClass}`}>
-                {r.diffPercent}
+                {diffPercent}
               </div>
               <div className={`mt-0.5 text-sm font-medium ${diffTextClass}`}>
-                {formatYen(r.diffYen)}
+                {formatYenSigned(diffYen)}
               </div>
               <div className="mt-2 text-[11px] text-slate-500">
                 前月比 / 売上 = セッション × CVR × AOV で分解
@@ -150,15 +455,34 @@ export default function RevenueAnalysis() {
             <div className="rounded-xl border border-slate-100 bg-white p-4">
               <div className="text-[11px] text-slate-500">前月売上</div>
               <div className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-                {formatYenAbs(r.prevRevenue)}
+                {formatYenAbs(prevRevenue)}
               </div>
-              <div className="mt-2 text-[11px] text-slate-500">{r.prevMonth}</div>
+              <div className="mt-2 text-[11px] text-slate-500">
+                {base.prevMonth}{" "}
+                {adjusted && (
+                  <span className="ml-1 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                    推定
+                  </span>
+                )}
+              </div>
               <div className="mt-3 border-t border-slate-100 pt-3">
                 <div className="text-[11px] text-slate-500">今月売上</div>
                 <div className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-                  {formatYenAbs(r.currRevenue)}
+                  {formatYenAbs(currRevenue)}
                 </div>
-                <div className="mt-1 text-[11px] text-slate-500">{r.month}</div>
+                <div className="mt-1 text-[11px] text-slate-500">
+                  {base.month}{" "}
+                  {adjusted && (
+                    <span className="ml-1 inline-block rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700">
+                      実値反映
+                    </span>
+                  )}
+                </div>
+                {ordersImport && (
+                  <div className="mt-1 text-[10px] text-slate-400">
+                    注文CSV売上合計: {formatYenAbs(ordersImport.aggregation.totalSales)}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -168,10 +492,10 @@ export default function RevenueAnalysis() {
                 主因候補
               </div>
               <p className="mt-2 text-sm leading-6 text-slate-800">
-                {r.primaryDriver}
+                {primaryDriver}
               </p>
               <p className="mt-3 text-[11px] leading-6 text-slate-600">
-                {r.headline}
+                {headline}
               </p>
             </div>
           </div>
@@ -179,8 +503,14 @@ export default function RevenueAnalysis() {
 
         {/* Factor cards */}
         <div className="grid gap-4 md:grid-cols-3">
-          {r.factors.map((f) => (
-            <FactorCard key={f.key} factor={f} maxAbsImpact={maxAbsImpact} />
+          {factors.map((f) => (
+            <FactorCard
+              key={f.key}
+              factor={f}
+              maxAbsImpact={maxAbsImpact}
+              source={resolved.sources[f.key]}
+              dynamic={adjusted}
+            />
           ))}
         </div>
 
@@ -195,11 +525,107 @@ export default function RevenueAnalysis() {
           }
         >
           <RevenueBridge
-            prevRevenue={r.prevRevenue}
-            currRevenue={r.currRevenue}
-            factors={r.factors}
+            prevRevenue={prevRevenue}
+            currRevenue={currRevenue}
+            factors={factors}
+            adjusted={adjusted}
           />
         </SectionCard>
+
+        {/* GA4 channel/LP breakdown — only when ga4 CSV is loaded */}
+        {ga4Import && (
+          <div className="grid gap-5 lg:grid-cols-2">
+            <SectionCard
+              title="GA4 チャネル別 流入とCVR"
+              icon={<BarChart3 size={16} className="text-sky-600" />}
+              action={
+                <span className="text-[11px] text-slate-500">
+                  CSV実値（上位5）
+                </span>
+              }
+            >
+              {ga4Import.aggregation.hasChannel ? (
+                <table className="table-clean">
+                  <thead>
+                    <tr>
+                      <th>チャネル</th>
+                      <th className="!w-24">セッション</th>
+                      <th className="!w-20">購入</th>
+                      <th className="!w-20">CVR</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ga4Import.aggregation.topChannels.map((c) => (
+                      <tr key={c.channel}>
+                        <td className="font-medium text-slate-800">
+                          {c.channel}
+                        </td>
+                        <td className="text-slate-600">
+                          {formatInt(c.sessions)}
+                        </td>
+                        <td className="text-slate-600">
+                          {formatInt(c.purchases)}
+                        </td>
+                        <td className="text-slate-700">
+                          {formatPercent(c.cvr)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-3 text-[11px] text-slate-500">
+                  channel 列が見当たりません。session_default_channel_group 等の列を含めるとチャネル別分析が可能になります。
+                </div>
+              )}
+            </SectionCard>
+
+            <SectionCard
+              title="GA4 ランディングページ別 CVR"
+              icon={<BarChart3 size={16} className="text-sky-600" />}
+              action={
+                <span className="text-[11px] text-slate-500">
+                  CSV実値（上位5）
+                </span>
+              }
+            >
+              {ga4Import.aggregation.hasLandingPage ? (
+                <table className="table-clean">
+                  <thead>
+                    <tr>
+                      <th>LP</th>
+                      <th className="!w-24">セッション</th>
+                      <th className="!w-20">購入</th>
+                      <th className="!w-20">CVR</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ga4Import.aggregation.topLandingPages.map((lp) => (
+                      <tr key={lp.landing_page}>
+                        <td className="font-mono text-[11px] text-slate-800">
+                          {lp.landing_page}
+                        </td>
+                        <td className="text-slate-600">
+                          {formatInt(lp.sessions)}
+                        </td>
+                        <td className="text-slate-600">
+                          {formatInt(lp.purchases)}
+                        </td>
+                        <td className="text-slate-700">
+                          {formatPercent(lp.cvr)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-3 text-[11px] text-slate-500">
+                  landing_page 列が見当たりません。page_path 等の列を含めるとLP別分析が可能になります。
+                </div>
+              )}
+            </SectionCard>
+          </div>
+        )}
 
         {/* Causes + Next actions */}
         <div className="grid gap-5 lg:grid-cols-2">
@@ -213,7 +639,7 @@ export default function RevenueAnalysis() {
             }
           >
             <ul className="space-y-3">
-              {r.causes.map((c) => (
+              {base.causes.map((c) => (
                 <li
                   key={c.id}
                   className="rounded-xl border border-slate-100 bg-slate-50/40 p-3"
@@ -258,7 +684,7 @@ export default function RevenueAnalysis() {
             }
           >
             <ul className="space-y-3">
-              {r.nextActions.map((a) => (
+              {base.nextActions.map((a) => (
                 <li
                   key={a.id}
                   className="rounded-xl border border-slate-100 bg-white p-3"
@@ -319,7 +745,7 @@ export default function RevenueAnalysis() {
             }
           >
             <ul className="grid gap-2 sm:grid-cols-2">
-              {r.dataReadiness.map((d) => (
+              {dataReadiness.map((d) => (
                 <li
                   key={d.label}
                   className="rounded-xl border border-slate-100 bg-white p-3"
@@ -339,16 +765,13 @@ export default function RevenueAnalysis() {
               ))}
             </ul>
             <p className="mt-3 text-[11px] text-slate-500">
-              現状はCSV-firstで「セッション × CVR × AOV」の構造を仮置きしています。
-              GA4 / 広告CSV を追加するとセッションとチャネル別CVRの精度が上がり、
-              将来的に BigQuery を読み取り接続すると自動更新になります。
+              {ga4Import
+                ? "GA4 CSV のセッション/CVR を反映済み。BigQuery 直接接続で自動更新化するのは将来フェーズです。"
+                : "現状は静的サンプルで「セッション × CVR × AOV」の構造を仮置きしています。GA4 CSV を取込むとセッションとチャネル別CVRの精度が上がり、将来 BigQuery を読み取り接続すると自動更新になります。"}
             </p>
           </SectionCard>
 
-          <SectionCard
-            title="この画面の役割"
-            icon={<Compass size={16} />}
-          >
+          <SectionCard title="この画面の役割" icon={<Compass size={16} />}>
             <p className="text-[13px] leading-7 text-slate-700">
               ここは GA4 や BigQuery を <b>読む画面ではありません</b>。
               EC担当者が「今月なぜ売上が動いたか」と
@@ -385,9 +808,13 @@ export default function RevenueAnalysis() {
 function FactorCard({
   factor,
   maxAbsImpact,
+  source,
+  dynamic,
 }: {
   factor: RevenueFactor;
   maxAbsImpact: number;
+  source: FactorMode;
+  dynamic: boolean;
 }) {
   const Icon = factorIcon[factor.key];
   const impactPct =
@@ -422,7 +849,9 @@ function FactorCard({
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         <div className="rounded-md bg-slate-50/60 px-2.5 py-1.5">
-          <div className="text-[10px] text-slate-500">前月</div>
+          <div className="text-[10px] text-slate-500">
+            前月{dynamic ? "（推定）" : ""}
+          </div>
           <div className="text-sm font-semibold text-slate-800">
             {factor.prevValue}
           </div>
@@ -438,7 +867,9 @@ function FactorCard({
       <div className="mt-3">
         <div className="flex items-center justify-between text-[11px]">
           <span className="text-slate-500">売上への影響</span>
-          <span className={`font-semibold ${intentTextClass[factor.changeIntent]}`}>
+          <span
+            className={`font-semibold ${intentTextClass[factor.changeIntent]}`}
+          >
             {factor.impactLabel}
           </span>
         </div>
@@ -450,9 +881,14 @@ function FactorCard({
         </div>
       </div>
 
-      <p className="mt-3 text-[11px] leading-6 text-slate-500">
-        {factor.driverNote}
-      </p>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <p className="text-[11px] leading-6 text-slate-500">
+          {factor.driverNote}
+        </p>
+        <Pill tone={sourcePillTone[source]} size="xs">
+          {sourcePillLabel[source]}
+        </Pill>
+      </div>
     </div>
   );
 }
@@ -461,10 +897,12 @@ function RevenueBridge({
   prevRevenue,
   currRevenue,
   factors,
+  adjusted,
 }: {
   prevRevenue: number;
   currRevenue: number;
   factors: RevenueFactor[];
+  adjusted: boolean;
 }) {
   const baseWidth = (n: number) =>
     prevRevenue === 0 ? 0 : Math.min(100, (n / prevRevenue) * 100);
@@ -479,10 +917,13 @@ function RevenueBridge({
       <BridgeRow
         label="前月売上"
         sub=""
-        value={`¥${prevRevenue.toLocaleString("ja-JP")}`}
+        value={`¥${Math.round(prevRevenue).toLocaleString("ja-JP")}`}
         bar={
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-navy-900" style={{ width: "100%" }} />
+            <div
+              className="h-full rounded-full bg-navy-900"
+              style={{ width: "100%" }}
+            />
           </div>
         }
         accent="text-slate-700"
@@ -518,8 +959,12 @@ function RevenueBridge({
 
       <BridgeRow
         label="今月売上"
-        sub={`前月比 ${((currRevenue / prevRevenue - 1) * 100).toFixed(1)}%`}
-        value={`¥${currRevenue.toLocaleString("ja-JP")}`}
+        sub={
+          prevRevenue === 0
+            ? ""
+            : `前月比 ${((currRevenue / prevRevenue - 1) * 100).toFixed(1)}%`
+        }
+        value={`¥${Math.round(currRevenue).toLocaleString("ja-JP")}`}
         bar={
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
             <div
@@ -532,7 +977,9 @@ function RevenueBridge({
       />
 
       <p className="mt-2 text-[11px] text-slate-500">
-        ※ 影響額は概算です。GA4 / 広告CSV を取り込むとチャネル別の精度が上がります。
+        {adjusted
+          ? "※ 影響額は連鎖法による概算（ΔS×Cprev×Aprev → Scurr×ΔC×Aprev → Scurr×Ccurr×ΔA）。前月値は静的サンプルを推定値として用いています。"
+          : "※ 影響額は概算です。GA4 / 広告CSV を取り込むとチャネル別の精度が上がります。"}
       </p>
     </div>
   );
