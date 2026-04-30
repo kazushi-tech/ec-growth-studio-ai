@@ -9,7 +9,7 @@ import {
   MOCK_LOCATION,
   DEFAULT_DATASET,
   MOCK_MESSAGE,
-} from './_shared';
+} from './_shared.js';
 
 type ErrorCode =
   | 'CONFIG_MISSING'

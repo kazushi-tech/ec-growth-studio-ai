@@ -9,7 +9,7 @@ import {
   safeMessage,
   DEFAULT_DATASET,
   MOCK_MESSAGE,
-} from './_shared';
+} from './_shared.js';
 
 type ErrorCode =
   | 'METHOD_NOT_ALLOWED'
