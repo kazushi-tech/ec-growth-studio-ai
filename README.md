@@ -57,6 +57,24 @@ Node 18 以上推奨（開発は Node 24 で確認）。
 
 `docs/product-spec.md` の「次にやるべきこと」に段階的実装の優先順位を記載しています。
 
+## サーバー側 環境変数（Phase 3A 着手中）
+
+Phase 3A 第1PR で `/api/bq/health`（Vercel Functions）を追加した。
+実値は **必ず Vercel Env (Sensitive)** に設定し、リポジトリにはコミットしない。
+キー一覧は [`.env.example`](.env.example) を参照。
+
+| Key | 用途 |
+| --- | --- |
+| `GCP_PROJECT_ID` | 接続先 GCP プロジェクトID |
+| `GCP_SERVICE_ACCOUNT_JSON_BASE64` | サービスアカウント JSON を base64 化したもの（**Sensitive**） |
+| `BQ_DATASET` | 参照する dataset 名（デフォルト `ec_growth_demo`） |
+| `BQ_LOCATION` | dataset ロケーション（デフォルト `asia-northeast1`） |
+| `ALLOWED_ORIGINS` | CORS で許可する Origin（カンマ区切り） |
+| `MAX_QUERY_DAYS` | 1 リクエストあたりの最大期間（後続 PR で利用） |
+
+> サービスアカウント JSON 本体・private_key・client_email を `.env.local` 含め
+> どこにも平文で残さない。Base64 化した値のみを Vercel Env に登録すること。
+
 ## ライセンス
 
 社内プロトタイプ。外部公開時は別途調整。
