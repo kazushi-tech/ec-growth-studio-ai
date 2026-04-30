@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -12,6 +13,13 @@ import {
   BookOpen,
   type LucideIcon,
 } from "lucide-react";
+import {
+  SIDEBAR_WIDTH_DEFAULT,
+  SIDEBAR_WIDTH_MAX,
+  SIDEBAR_WIDTH_MIN,
+  SIDEBAR_WIDTH_STEP,
+  useResizableSidebar,
+} from "../../hooks/useResizableSidebar";
 
 type NavItem = {
   label: string;
@@ -40,9 +48,96 @@ type Props = {
 };
 
 export default function Sidebar({ onNavigate }: Props) {
+  const { width, setWidth, resetWidth } = useResizableSidebar();
+  const asideRef = useRef<HTMLElement>(null);
+  const dragOffsetRef = useRef(0);
+  const [isResizing, setIsResizing] = useState(false);
+
+  // ドラッグ中だけ window に pointermove/up を貼る。
+  // body の userSelect / cursor を一時的に上書きして、
+  // テキスト選択や false な cursor 表示を抑える。
+  useEffect(() => {
+    if (!isResizing) return;
+    const handleMove = (event: PointerEvent) => {
+      setWidth(event.clientX - dragOffsetRef.current);
+    };
+    const handleUp = () => {
+      setIsResizing(false);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("pointercancel", handleUp);
+    const previousUserSelect = document.body.style.userSelect;
+    const previousCursor = document.body.style.cursor;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "ew-resize";
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("pointercancel", handleUp);
+      document.body.style.userSelect = previousUserSelect;
+      document.body.style.cursor = previousCursor;
+    };
+  }, [isResizing, setWidth]);
+
+  const onHandlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // 左クリックのみ許容 (右/中クリックでドラッグ開始しない)。
+    if (event.button !== 0) return;
+    const aside = asideRef.current;
+    if (!aside) return;
+    event.preventDefault();
+    dragOffsetRef.current = aside.getBoundingClientRect().left;
+    setIsResizing(true);
+  };
+
+  const onHandleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    let next: number | null = null;
+    switch (event.key) {
+      case "ArrowLeft":
+        next = width - SIDEBAR_WIDTH_STEP;
+        break;
+      case "ArrowRight":
+        next = width + SIDEBAR_WIDTH_STEP;
+        break;
+      case "Home":
+        next = SIDEBAR_WIDTH_MIN;
+        break;
+      case "End":
+        next = SIDEBAR_WIDTH_MAX;
+        break;
+      case "Enter":
+        next = SIDEBAR_WIDTH_DEFAULT;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    setWidth(next);
+  };
+
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-navy-800/70 bg-navy-950 text-navy-100 lg:flex">
+    <aside
+      ref={asideRef}
+      style={{ width: `${width}px` }}
+      className="relative hidden shrink-0 flex-col border-r border-navy-800/70 bg-navy-950 text-navy-100 lg:flex"
+    >
       <SidebarBody onNavigate={onNavigate} />
+      <div
+        role="separator"
+        aria-label="サイドバー幅を調整 (矢印キー: 16pxずつ / Home: 最小 / End: 最大 / Enter: 既定値)"
+        aria-orientation="vertical"
+        aria-valuemin={SIDEBAR_WIDTH_MIN}
+        aria-valuemax={SIDEBAR_WIDTH_MAX}
+        aria-valuenow={width}
+        tabIndex={0}
+        onPointerDown={onHandlePointerDown}
+        onKeyDown={onHandleKeyDown}
+        onDoubleClick={resetWidth}
+        title="ドラッグ / 矢印キーで幅を調整。ダブルクリックで既定値に戻す"
+        className={`group/handle absolute right-0 top-0 z-10 h-full w-1.5 cursor-ew-resize touch-none transition-colors duration-150 hover:bg-emerald-300/40 ${
+          isResizing ? "bg-emerald-300/60" : ""
+        }`}
+      />
     </aside>
   );
 }
