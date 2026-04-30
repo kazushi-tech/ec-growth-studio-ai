@@ -13,6 +13,7 @@ import {
   TrendingUp,
   CheckCircle2,
   ArrowRight,
+  AlertCircle,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import SectionCard from "../components/ui/SectionCard";
@@ -47,18 +48,33 @@ export default function AiReport() {
       />
 
       <div className="space-y-5 px-6 py-5">
+        {/* Sample-text disclaimer — make it explicit that AI text on this page is sample copy */}
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-2.5 text-[12px] text-amber-900">
+          <AlertCircle size={14} className="text-amber-600" />
+          <span className="font-semibold">この画面のAI考察はサンプル文言です。</span>
+          <span className="text-amber-800/90">
+            現MVPは「AI診断 × 人間レビュー」のワークフロー検証が目的で、
+            実AI生成は <b>Phase 4 で Anthropic SDK + prompt cache</b> に接続予定。
+            数値はサンプルデータ、文言は固定の参考文です。
+          </span>
+        </div>
+
         {/* Top: AI diagnosis + Numerical evidence */}
         <div className="grid gap-5 lg:grid-cols-3">
           <SectionCard
             className="lg:col-span-2"
             title="AI総合診断"
             icon={<Sparkles size={16} />}
-            action={<Pill tone="mint">信頼度: 高</Pill>}
+            action={
+              <Pill tone="gold">
+                <AlertCircle size={11} /> サンプル文言
+              </Pill>
+            }
           >
             <div className="grid gap-5 md:grid-cols-2">
               <div>
                 <div className="text-xs font-semibold text-slate-500">
-                  今月の結論
+                  今月の結論（サンプル）
                 </div>
                 <p className="mt-2 text-sm leading-7 text-slate-800">
                   売上は前月比 <b>+14.3%</b> で成長、ただし主力商品AのCVR低下、

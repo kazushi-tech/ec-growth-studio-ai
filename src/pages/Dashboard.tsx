@@ -11,7 +11,6 @@ import {
   CalendarClock,
   Users,
   RefreshCw,
-  Check,
   Database,
   Lightbulb,
   AlertCircle,
@@ -129,6 +128,13 @@ export default function Dashboard() {
           bqDemoMeta={bqDemoData}
         />
 
+        <DataStateSummary
+          ordersImport={ordersImport}
+          ga4Import={ga4Import}
+          adsImport={adsImport}
+          bqDemoEnabled={bqDemoEnabled}
+        />
+
         {bqDemoError && (
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-rose-200 bg-rose-50/70 px-4 py-2 text-[11px] text-rose-800">
             <AlertCircle size={12} />
@@ -179,8 +185,8 @@ export default function Dashboard() {
               title="AI月次診断サマリー"
               icon={<Sparkles size={16} />}
               action={
-                <Pill tone="mint">
-                  <Check size={11} /> 信頼度: 高
+                <Pill tone="gold">
+                  <AlertCircle size={11} /> サンプル文言 / Phase 4で実AI接続
                 </Pill>
               }
             >
@@ -594,6 +600,93 @@ function DataSourceBar({
         </span>
       </div>
     </div>
+  );
+}
+
+function DataStateSummary({
+  ordersImport,
+  ga4Import,
+  adsImport,
+  bqDemoEnabled,
+}: {
+  ordersImport: { fileName: string } | null;
+  ga4Import: { fileName: string } | null;
+  adsImport: { fileName: string } | null;
+  bqDemoEnabled: boolean;
+}) {
+  const items: {
+    label: string;
+    state: string;
+    tone: "mint" | "sky" | "gold" | "slate";
+    note: string;
+  }[] = [
+    {
+      label: "注文CSV",
+      state: ordersImport ? "実値（取込済）" : "未取込 / サンプル",
+      tone: ordersImport ? "mint" : "slate",
+      note: ordersImport ? "売上 / 注文 / AOV を実値で計算" : "CSV取込で実値化",
+    },
+    {
+      label: "GA4 CSV",
+      state: ga4Import ? "実値（取込済）" : "未取込",
+      tone: ga4Import ? "mint" : "slate",
+      note: ga4Import ? "セッション / CVR を実値で反映" : "CSV取込対応・実API未接続",
+    },
+    {
+      label: "広告CSV",
+      state: adsImport ? "実値（取込済）" : "未取込",
+      tone: adsImport ? "mint" : "slate",
+      note: adsImport ? "ROAS / CPC / CVR を実値で反映" : "CSV取込対応・実API未接続",
+    },
+    {
+      label: "BigQuery",
+      state: bqDemoEnabled ? "デモ表示中" : "デモ可 / GCP未接続",
+      tone: bqDemoEnabled ? "sky" : "gold",
+      note: "実GCP接続なし。接続後の見え方を再現",
+    },
+    {
+      label: "AI考察",
+      state: "サンプル文言",
+      tone: "gold",
+      note: "実AI生成は Phase 4 で接続予定",
+    },
+  ];
+
+  return (
+    <SectionCard
+      title="データ状態サマリー"
+      icon={<Database size={16} />}
+      action={
+        <span className="text-[11px] text-slate-500">
+          実値 / デモ / 未接続を一目で確認
+        </span>
+      }
+    >
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        {items.map((it) => (
+          <div
+            key={it.label}
+            className="rounded-xl border border-slate-100 bg-white p-3"
+          >
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[11px] font-semibold text-slate-700">
+                {it.label}
+              </span>
+              <Pill tone={it.tone} size="xs">
+                {it.state}
+              </Pill>
+            </div>
+            <p className="mt-1.5 text-[10px] leading-4 text-slate-500">
+              {it.note}
+            </p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-[11px] text-slate-500">
+        ※ 本MVPは <b>実 GCP / 実 GA4 API / 実 広告 API / 実 AI API には未接続</b>。
+        CSV取込（実値）と BigQueryデモ（接続後の再現）で、月次運用フローを確認できます。
+      </p>
+    </SectionCard>
   );
 }
 
