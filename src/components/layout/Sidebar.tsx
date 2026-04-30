@@ -9,6 +9,7 @@ import {
   Crown,
   TrendingUp,
   Activity,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { label: "商品ページ改善", to: "/app/product-page", icon: FileEdit },
   { label: "施策ボード", to: "/app/action-board", icon: KanbanSquare },
   { label: "月次レポート", to: "/app/monthly-report", icon: FileBarChart2 },
+  { label: "ガイド", to: "/app/guide", icon: BookOpen },
 ];
 
 type Props = {

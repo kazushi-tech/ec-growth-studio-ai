@@ -8,6 +8,7 @@ import ActionBoard from "./pages/ActionBoard";
 import DataImport from "./pages/DataImport";
 import MonthlyReport from "./pages/MonthlyReport";
 import RevenueAnalysis from "./pages/RevenueAnalysis";
+import Guide from "./pages/Guide";
 import NotFound from "./pages/NotFound";
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/app/action-board" element={<ActionBoard />} />
         <Route path="/app/data-import" element={<DataImport />} />
         <Route path="/app/monthly-report" element={<MonthlyReport />} />
+        <Route path="/app/guide" element={<Guide />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
