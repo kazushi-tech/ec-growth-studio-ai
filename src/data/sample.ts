@@ -92,6 +92,9 @@ export type Action = {
   next: string;
   expected: string;
   product?: string;
+  reviewComment?: string;
+  reviewer?: string;
+  reviewedAt?: string;
 };
 
 export const actions: Action[] = [
@@ -110,6 +113,9 @@ export const actions: Action[] = [
     data: "商品画像、レビュー",
     next: "改善コピー確認",
     expected: "想定CVR +0.3〜0.5pt",
+    reviewComment: "広告クリエイティブのキーメッセージとLP見出しの一貫性を最優先。レビュー文言は薬機法表現を要確認。",
+    reviewer: "Growth Lead",
+    reviewedAt: "2026/04/29",
   },
   {
     id: 2,
@@ -126,6 +132,9 @@ export const actions: Action[] = [
     data: "広告CSV",
     next: "予算配分案を確認",
     expected: "想定売上 +¥720,000",
+    reviewComment: "5/1 までに配分案を提示。商品A 在庫減リスクと整合させて在庫担当と要すり合わせ。",
+    reviewer: "BPaaS PM",
+    reviewedAt: "2026/04/28",
   },
   {
     id: 3,
@@ -142,6 +151,9 @@ export const actions: Action[] = [
     data: "顧客CSV",
     next: "配信文面レビュー",
     expected: "想定リピート率 +1.5pt",
+    reviewComment: "件名と配信時間帯の A/B を5/3 までに用意。配信頻度はオプトアウト率を要モニタ。",
+    reviewer: "Growth Lead",
+    reviewedAt: "2026/04/29",
   },
   {
     id: 4,
@@ -190,6 +202,9 @@ export const actions: Action[] = [
     data: "レビューCSV",
     next: "ワイヤー確認",
     expected: "想定CVR +0.2pt",
+    reviewComment: "★平均 / レビュー件数の併記でデコレーション過多にならないよう注意。",
+    reviewer: "BPaaS PM",
+    reviewedAt: "2026/04/27",
   },
   {
     id: 7,
@@ -238,6 +253,9 @@ export const actions: Action[] = [
     data: "GA4・売上・広告データ",
     next: "効果レポート作成",
     expected: "効果検証中",
+    reviewComment: "前後2週間でのCVR比較は 4/16 を境に。スマホ比率の偏りに注意して切り分け。",
+    reviewer: "Growth Lead",
+    reviewedAt: "2026/04/30",
   },
   {
     id: 10,
