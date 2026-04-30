@@ -157,60 +157,108 @@ async function main() {
 
   const r3 = await runHandler({
     envOverrides: { BQ_MOCK_MODE: 'true' },
-    query: { from: '2026-02-30', to: '2026-04-07' },
+    query: { from: '2030-01-01', to: '2030-01-31' },
   });
-  console.log(JSON.stringify({ case: 'GET invalid date', status: r3.statusCode, body: r3.body }));
-  expect('GET invalid date -> 400', r3.statusCode === 400);
+  console.log(JSON.stringify({ case: 'GET mock out-of-range', status: r3.statusCode, body: r3.body }));
+  expect('GET mock out-of-range -> 200', r3.statusCode === 200);
   expect(
-    'GET invalid date -> INVALID_DATE',
-    (r3.body as { errorCode?: string })?.errorCode === 'INVALID_DATE',
+    'GET mock out-of-range -> empty rows / orderCount=0',
+    ((r3.body as { rows?: unknown[] })?.rows ?? []).length === 0 &&
+      (r3.body as { summary?: { orderCount?: number } })?.summary?.orderCount === 0,
   );
 
   const r4 = await runHandler({
     envOverrides: { BQ_MOCK_MODE: 'true' },
-    query: { from: '2026-04-08', to: '2026-04-07' },
+    query: { from: 'not-a-date', to: '2026-04-07' },
   });
-  console.log(JSON.stringify({ case: 'GET invalid range', status: r4.statusCode, body: r4.body }));
-  expect('GET invalid range -> 400', r4.statusCode === 400);
+  console.log(JSON.stringify({ case: 'GET invalid date', status: r4.statusCode, body: r4.body }));
+  expect('GET invalid date -> 400', r4.statusCode === 400);
   expect(
-    'GET invalid range -> INVALID_RANGE',
-    (r4.body as { errorCode?: string })?.errorCode === 'INVALID_RANGE',
+    'GET invalid date -> INVALID_DATE',
+    (r4.body as { errorCode?: string })?.errorCode === 'INVALID_DATE',
   );
 
   const r5 = await runHandler({
-    envOverrides: { BQ_MOCK_MODE: 'true', MAX_QUERY_DAYS: '7' },
-    query: { from: '2026-04-01', to: '2026-04-08' },
+    envOverrides: { BQ_MOCK_MODE: 'true' },
+    query: { from: '2026-02-30', to: '2026-04-07' },
   });
-  console.log(JSON.stringify({ case: 'GET range too long', status: r5.statusCode, body: r5.body }));
-  expect('GET range too long -> 400', r5.statusCode === 400);
+  console.log(JSON.stringify({ case: 'GET non-existent date', status: r5.statusCode, body: r5.body }));
+  expect('GET non-existent date -> 400', r5.statusCode === 400);
   expect(
-    'GET range too long -> RANGE_TOO_LONG',
-    (r5.body as { errorCode?: string })?.errorCode === 'RANGE_TOO_LONG',
+    'GET non-existent date -> INVALID_DATE',
+    (r5.body as { errorCode?: string })?.errorCode === 'INVALID_DATE',
   );
 
   const r6 = await runHandler({
+    envOverrides: { BQ_MOCK_MODE: 'true' },
+    query: { from: '2026-04-08', to: '2026-04-07' },
+  });
+  console.log(JSON.stringify({ case: 'GET invalid range', status: r6.statusCode, body: r6.body }));
+  expect('GET invalid range -> 400', r6.statusCode === 400);
+  expect(
+    'GET invalid range -> INVALID_RANGE',
+    (r6.body as { errorCode?: string })?.errorCode === 'INVALID_RANGE',
+  );
+
+  const r7 = await runHandler({
+    envOverrides: { BQ_MOCK_MODE: 'true', MAX_QUERY_DAYS: '7' },
+    query: { from: '2026-04-01', to: '2026-04-08' },
+  });
+  console.log(JSON.stringify({ case: 'GET range too long', status: r7.statusCode, body: r7.body }));
+  expect('GET range too long -> 400', r7.statusCode === 400);
+  expect(
+    'GET range too long -> RANGE_TOO_LONG',
+    (r7.body as { errorCode?: string })?.errorCode === 'RANGE_TOO_LONG',
+  );
+
+  const r8 = await runHandler({
+    method: 'POST',
+    envOverrides: { BQ_MOCK_MODE: 'true' },
+  });
+  console.log(JSON.stringify({ case: 'POST no-origin', status: r8.statusCode, body: r8.body }));
+  expect('POST no-origin -> 405', r8.statusCode === 405);
+
+  const r9 = await runHandler({
     origin: 'https://evil.example.com',
     envOverrides: { BQ_MOCK_MODE: 'true', ALLOWED_ORIGINS: undefined },
   });
   console.log(
     JSON.stringify({
       case: 'GET denied origin',
-      status: r6.statusCode,
-      acao: r6.headers['access-control-allow-origin'] ?? null,
-      body: r6.body,
+      status: r9.statusCode,
+      acao: r9.headers['access-control-allow-origin'] ?? null,
+      body: r9.body,
     }),
   );
-  expect('GET denied origin -> 403', r6.statusCode === 403);
+  expect('GET denied origin -> 403', r9.statusCode === 403);
   expect(
     'GET denied origin -> CORS_FORBIDDEN',
-    (r6.body as { errorCode?: string })?.errorCode === 'CORS_FORBIDDEN',
+    (r9.body as { errorCode?: string })?.errorCode === 'CORS_FORBIDDEN',
   );
   expect(
     'GET denied origin -> no ACAO',
-    r6.headers['access-control-allow-origin'] === undefined,
+    r9.headers['access-control-allow-origin'] === undefined,
   );
 
-  const r7 = await runHandler({
+  const r10 = await runHandler({
+    origin: 'https://allowed.example.com',
+    envOverrides: { BQ_MOCK_MODE: 'true', ALLOWED_ORIGINS: 'https://allowed.example.com' },
+  });
+  console.log(
+    JSON.stringify({
+      case: 'GET allowed origin',
+      status: r10.statusCode,
+      acao: r10.headers['access-control-allow-origin'] ?? null,
+      body: r10.body,
+    }),
+  );
+  expect('GET allowed origin -> 200', r10.statusCode === 200);
+  expect(
+    'GET allowed origin -> ACAO echoed',
+    r10.headers['access-control-allow-origin'] === 'https://allowed.example.com',
+  );
+
+  const r11 = await runHandler({
     method: 'OPTIONS',
     origin: 'https://allowed.example.com',
     envOverrides: { ALLOWED_ORIGINS: 'https://allowed.example.com' },
@@ -218,17 +266,17 @@ async function main() {
   console.log(
     JSON.stringify({
       case: 'OPTIONS allowed origin',
-      status: r7.statusCode,
-      acao: r7.headers['access-control-allow-origin'] ?? null,
+      status: r11.statusCode,
+      acao: r11.headers['access-control-allow-origin'] ?? null,
     }),
   );
-  expect('OPTIONS allowed origin -> 204', r7.statusCode === 204);
+  expect('OPTIONS allowed origin -> 204', r11.statusCode === 204);
   expect(
     'OPTIONS allowed origin -> ACAO echoed',
-    r7.headers['access-control-allow-origin'] === 'https://allowed.example.com',
+    r11.headers['access-control-allow-origin'] === 'https://allowed.example.com',
   );
 
-  const r8 = await runHandler({
+  const r12 = await runHandler({
     method: 'OPTIONS',
     origin: 'https://evil.example.com',
     envOverrides: { ALLOWED_ORIGINS: 'https://allowed.example.com' },
@@ -236,14 +284,14 @@ async function main() {
   console.log(
     JSON.stringify({
       case: 'OPTIONS denied origin',
-      status: r8.statusCode,
-      acao: r8.headers['access-control-allow-origin'] ?? null,
+      status: r12.statusCode,
+      acao: r12.headers['access-control-allow-origin'] ?? null,
     }),
   );
-  expect('OPTIONS denied origin -> 403', r8.statusCode === 403);
+  expect('OPTIONS denied origin -> 403', r12.statusCode === 403);
   expect(
     'OPTIONS denied origin -> no ACAO',
-    r8.headers['access-control-allow-origin'] === undefined,
+    r12.headers['access-control-allow-origin'] === undefined,
   );
 
   if (failures > 0) {
