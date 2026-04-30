@@ -5,6 +5,7 @@ type ErrorCode =
   | 'CONFIG_MISSING'
   | 'CREDENTIALS_INVALID'
   | 'BQ_QUERY_FAILED'
+  | 'DATASET_CHECK_FAILED'
   | 'METHOD_NOT_ALLOWED'
   | 'CORS_FORBIDDEN'
   | 'UNKNOWN';
@@ -51,6 +52,25 @@ function safeMessage(err: unknown): string {
   return 'Unknown error';
 }
 
+/**
+ * BigQuery SDK が投げる "Not Found" 相当のエラー（dataset が単純に存在しない）と、
+ * 権限不足 / location 不一致 / ネットワーク失敗を区別する。
+ *
+ * smoke test から検証可能にするため export している。本番のユーザー向けエンドポイントで
+ * 内部関数を露出させているわけではない。
+ */
+export function isNotFoundError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { code?: unknown; status?: unknown; message?: unknown };
+  if (e.code === 404 || e.status === 404) return true;
+  if (typeof e.code === 'string' && e.code.toUpperCase() === 'NOT_FOUND') return true;
+  if (typeof e.message === 'string') {
+    const msg = e.message.toLowerCase();
+    if (msg.includes('not found') && !msg.includes('permission')) return true;
+  }
+  return false;
+}
+
 function parseAllowedOrigins(): string[] {
   return (process.env.ALLOWED_ORIGINS ?? '')
     .split(',')
@@ -58,19 +78,33 @@ function parseAllowedOrigins(): string[] {
     .filter(Boolean);
 }
 
+/**
+ * fail-closed CORS:
+ * - Origin ヘッダなし: same-origin / curl / サーバー間呼び出しと見なし許可（CORS 関連ヘッダは付けない）
+ * - Origin あり + ALLOWED_ORIGINS に含まれる: 許可（Access-Control-Allow-Origin を返す）
+ * - Origin あり + ALLOWED_ORIGINS 未設定 or 不一致: 拒否（CORS ヘッダを一切付けない）
+ */
 function applyCors(req: VercelRequest, res: VercelResponse): { allowed: boolean; origin: string } {
   const origin = (req.headers.origin as string | undefined) ?? '';
   const allowedList = parseAllowedOrigins();
-  const allowed = origin === '' || allowedList.length === 0 || allowedList.includes(origin);
-  if (allowed && origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
+
+  res.setHeader('Cache-Control', 'no-store');
+
+  if (origin === '') {
+    return { allowed: true, origin };
   }
+
+  const matched = allowedList.includes(origin);
+  if (!matched) {
+    return { allowed: false, origin };
+  }
+
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Max-Age', '300');
-  res.setHeader('Cache-Control', 'no-store');
-  return { allowed, origin };
+  return { allowed: true, origin };
 }
 
 function jsonFailure(
@@ -92,13 +126,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   try {
     const { allowed } = applyCors(req, res);
 
-    if (req.method === 'OPTIONS') {
-      res.status(204).end();
+    if (!allowed) {
+      // OPTIONS preflight も含め、許可外 Origin には Access-Control-Allow-Origin を返さず
+      // 403 で安全に失敗させる（fail closed）。
+      if (req.method === 'OPTIONS') {
+        res.status(403).end();
+        return;
+      }
+      jsonFailure(res, 403, 'CORS_FORBIDDEN', 'Origin is not allowed');
       return;
     }
 
-    if (!allowed) {
-      jsonFailure(res, 403, 'CORS_FORBIDDEN', 'Origin is not allowed');
+    if (req.method === 'OPTIONS') {
+      res.status(204).end();
       return;
     }
 
@@ -156,12 +196,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
       await bq.query({ query: 'SELECT 1 AS ok', location });
 
-      let datasetExists = false;
+      let datasetExists: boolean;
       try {
         const [exists] = await bq.dataset(dataset).exists();
         datasetExists = exists;
-      } catch {
-        datasetExists = false;
+      } catch (err) {
+        // 404 / Not Found 相当のみ「存在しない」として扱い、それ以外（権限不足・
+        // location 不一致・API 失敗）は明示的なエラーとして返す。
+        if (isNotFoundError(err)) {
+          datasetExists = false;
+        } else {
+          jsonFailure(res, 200, 'DATASET_CHECK_FAILED', safeMessage(err));
+          return;
+        }
       }
 
       const latencyMs = Date.now() - startedAt;
