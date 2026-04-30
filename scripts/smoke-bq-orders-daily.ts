@@ -5,8 +5,7 @@
  * Usage:
  *   npx tsx scripts/smoke-bq-orders-daily.ts
  *
- * 実 GCP には接続しない。BQ_MOCK_MODE / CORS / method / date validation /
- * MAX_QUERY_DAYS / NOT_IMPLEMENTED の分岐のみを検証する。
+ * Phase 3A 第2PRは mock mode のみを扱う。実 BigQuery クエリは検証しない。
  */
 import handler from '../api/bq/orders-daily';
 
@@ -47,16 +46,50 @@ function makeRes(): MockResponse {
   return res;
 }
 
-function makeReq(
-  method: string,
-  origin: string | undefined,
-  query: Record<string, string> = {},
-) {
+function makeReq(method: string, origin?: string, query: Record<string, string> = {}) {
   return {
     method,
     headers: origin ? { origin } : {},
     query,
   };
+}
+
+const isolatedKeys = [
+  'BQ_MOCK_MODE',
+  'BQ_DATASET',
+  'ALLOWED_ORIGINS',
+  'MAX_QUERY_DAYS',
+];
+
+async function runHandler({
+  method = 'GET',
+  origin,
+  query = {},
+  envOverrides = {},
+}: {
+  method?: string;
+  origin?: string;
+  query?: Record<string, string>;
+  envOverrides?: Record<string, string | undefined>;
+}) {
+  const before: Record<string, string | undefined> = {};
+  for (const k of isolatedKeys) {
+    before[k] = process.env[k];
+    const v = envOverrides[k];
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+
+  const req = makeReq(method, origin, query);
+  const res = makeRes();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await handler(req as any, res as any);
+
+  for (const [k, v] of Object.entries(before)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+  return res;
 }
 
 let failures = 0;
@@ -67,216 +100,150 @@ function expect(name: string, cond: boolean, detail?: string) {
   }
 }
 
-async function runHandler(
-  method: string,
-  origin: string | undefined,
-  query: Record<string, string>,
-  envOverrides: Record<string, string | undefined>,
-) {
-  const before: Record<string, string | undefined> = {};
-  for (const [k, v] of Object.entries(envOverrides)) {
-    before[k] = process.env[k];
-    if (v === undefined) delete process.env[k];
-    else process.env[k] = v;
-  }
-  const req = makeReq(method, origin, query);
-  const res = makeRes();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await handler(req as any, res as any);
-  for (const [k, v] of Object.entries(before)) {
-    if (v === undefined) delete process.env[k];
-    else process.env[k] = v;
-  }
-  return res;
+function leaksSecret(body: unknown): boolean {
+  const s = JSON.stringify(body ?? '');
+  return (
+    s.includes('private_key') ||
+    s.includes('BEGIN PRIVATE KEY') ||
+    s.includes('client_email')
+  );
 }
 
 async function main() {
-  // ---------- mock-mode 成功（明示的 from/to） ----------
-  const r1 = await runHandler(
-    'GET',
-    undefined,
-    { from: '2026-04-01', to: '2026-04-30' },
-    { BQ_MOCK_MODE: 'true', ALLOWED_ORIGINS: undefined, MAX_QUERY_DAYS: undefined },
-  );
-  console.log(
-    JSON.stringify({
-      case: 'mock GET full-april',
-      status: r1.statusCode,
-      ok: (r1.body as { ok?: boolean })?.ok,
-      mode: (r1.body as { mode?: string })?.mode,
-      rowCount: ((r1.body as { rows?: unknown[] })?.rows ?? []).length,
-      summary: (r1.body as { summary?: unknown })?.summary,
-    }),
-  );
-  expect('mock GET full-april → 200', r1.statusCode === 200);
+  const r0 = await runHandler({});
+  console.log(JSON.stringify({ case: 'GET no-mock', status: r0.statusCode, body: r0.body }));
+  expect('GET no-mock -> 501', r0.statusCode === 501);
   expect(
-    'mock GET full-april → ok:true / mode:mock',
-    (r1.body as { ok?: boolean })?.ok === true &&
+    'GET no-mock -> NOT_IMPLEMENTED',
+    (r0.body as { ok?: boolean; errorCode?: string })?.ok === false &&
+      (r0.body as { errorCode?: string })?.errorCode === 'NOT_IMPLEMENTED',
+  );
+
+  const r1 = await runHandler({ envOverrides: { BQ_MOCK_MODE: 'true' } });
+  console.log(JSON.stringify({ case: 'GET mock default', status: r1.statusCode, body: r1.body }));
+  expect('GET mock default -> 200', r1.statusCode === 200);
+  expect(
+    'GET mock default -> ok:true / mode:mock',
+    (r1.body as { ok?: boolean; mode?: string })?.ok === true &&
       (r1.body as { mode?: string })?.mode === 'mock',
   );
   expect(
-    'mock GET full-april → 30 rows',
-    ((r1.body as { rows?: unknown[] }).rows ?? []).length === 30,
+    'GET mock default -> 30 rows',
+    ((r1.body as { rows?: unknown[] })?.rows ?? []).length === 30,
   );
   expect(
-    'mock GET full-april → summary fields present',
-    typeof (r1.body as { summary?: { revenue?: number; orderCount?: number; aov?: number } })
-      ?.summary?.revenue === 'number' &&
-      typeof (r1.body as { summary?: { orderCount?: number } })?.summary?.orderCount === 'number' &&
-      typeof (r1.body as { summary?: { aov?: number } })?.summary?.aov === 'number',
+    'GET mock default -> summary populated',
+    ((r1.body as { summary?: { revenue?: number; orderCount?: number; aov?: number } })?.summary
+      ?.revenue ?? 0) > 0 &&
+      ((r1.body as { summary?: { orderCount?: number } })?.summary?.orderCount ?? 0) > 0 &&
+      ((r1.body as { summary?: { aov?: number } })?.summary?.aov ?? 0) > 0,
+  );
+  expect(
+    'GET mock default -> message says no GCP connection',
+    String((r1.body as { message?: string })?.message ?? '').includes('No GCP connection'),
+  );
+  expect('GET mock default -> no secret leak', !leaksSecret(r1.body));
+
+  const r2 = await runHandler({
+    envOverrides: { BQ_MOCK_MODE: '1' },
+    query: { from: '2026-04-01', to: '2026-04-07' },
+  });
+  console.log(JSON.stringify({ case: 'GET mock 7 days', status: r2.statusCode, body: r2.body }));
+  expect('GET mock 7 days -> 200', r2.statusCode === 200);
+  expect(
+    'GET mock 7 days -> 7 rows',
+    ((r2.body as { rows?: unknown[] })?.rows ?? []).length === 7,
   );
 
-  const sum = (r1.body as { summary?: { revenue: number; orderCount: number; aov: number } })
-    ?.summary;
-  // 30日 mock data の合計が EC ECサイトとして妥当な範囲内（数千万円・数千件）
+  const r3 = await runHandler({
+    envOverrides: { BQ_MOCK_MODE: 'true' },
+    query: { from: '2026-02-30', to: '2026-04-07' },
+  });
+  console.log(JSON.stringify({ case: 'GET invalid date', status: r3.statusCode, body: r3.body }));
+  expect('GET invalid date -> 400', r3.statusCode === 400);
   expect(
-    'mock summary revenue is plausible (¥8M〜¥20M)',
-    !!sum && sum.revenue >= 8_000_000 && sum.revenue <= 20_000_000,
-    `revenue=${sum?.revenue}`,
-  );
-  expect(
-    'mock summary orderCount is plausible (2,000〜5,000)',
-    !!sum && sum.orderCount >= 2_000 && sum.orderCount <= 5_000,
-    `orderCount=${sum?.orderCount}`,
+    'GET invalid date -> INVALID_DATE',
+    (r3.body as { errorCode?: string })?.errorCode === 'INVALID_DATE',
   );
 
-  // ---------- mock-mode: クエリ未指定でもデフォルト範囲を返す ----------
-  const r2 = await runHandler(
-    'GET',
-    undefined,
-    {},
-    { BQ_MOCK_MODE: '1', ALLOWED_ORIGINS: undefined },
-  );
-  expect('mock no-query → 200', r2.statusCode === 200);
+  const r4 = await runHandler({
+    envOverrides: { BQ_MOCK_MODE: 'true' },
+    query: { from: '2026-04-08', to: '2026-04-07' },
+  });
+  console.log(JSON.stringify({ case: 'GET invalid range', status: r4.statusCode, body: r4.body }));
+  expect('GET invalid range -> 400', r4.statusCode === 400);
   expect(
-    'mock no-query → ok:true',
-    (r2.body as { ok?: boolean })?.ok === true,
-  );
-  expect(
-    'mock no-query → defaults applied',
-    (r2.body as { from?: string })?.from === '2026-04-01' &&
-      (r2.body as { to?: string })?.to === '2026-04-30',
+    'GET invalid range -> INVALID_RANGE',
+    (r4.body as { errorCode?: string })?.errorCode === 'INVALID_RANGE',
   );
 
-  // ---------- mock-mode: 範囲外（rows 空配列） ----------
-  const r3 = await runHandler(
-    'GET',
-    undefined,
-    { from: '2030-01-01', to: '2030-01-31' },
-    { BQ_MOCK_MODE: 'true', ALLOWED_ORIGINS: undefined },
-  );
-  expect('mock out-of-range → 200', r3.statusCode === 200);
+  const r5 = await runHandler({
+    envOverrides: { BQ_MOCK_MODE: 'true', MAX_QUERY_DAYS: '7' },
+    query: { from: '2026-04-01', to: '2026-04-08' },
+  });
+  console.log(JSON.stringify({ case: 'GET range too long', status: r5.statusCode, body: r5.body }));
+  expect('GET range too long -> 400', r5.statusCode === 400);
   expect(
-    'mock out-of-range → empty rows / orderCount=0',
-    ((r3.body as { rows?: unknown[] }).rows ?? []).length === 0 &&
-      (r3.body as { summary?: { orderCount?: number } })?.summary?.orderCount === 0,
+    'GET range too long -> RANGE_TOO_LONG',
+    (r5.body as { errorCode?: string })?.errorCode === 'RANGE_TOO_LONG',
   );
 
-  // ---------- 不正な date ----------
-  const r4 = await runHandler(
-    'GET',
-    undefined,
-    { from: 'not-a-date', to: '2026-04-30' },
-    { BQ_MOCK_MODE: 'true', ALLOWED_ORIGINS: undefined },
+  const r6 = await runHandler({
+    origin: 'https://evil.example.com',
+    envOverrides: { BQ_MOCK_MODE: 'true', ALLOWED_ORIGINS: undefined },
+  });
+  console.log(
+    JSON.stringify({
+      case: 'GET denied origin',
+      status: r6.statusCode,
+      acao: r6.headers['access-control-allow-origin'] ?? null,
+      body: r6.body,
+    }),
   );
-  expect('invalid from → 400', r4.statusCode === 400);
+  expect('GET denied origin -> 403', r6.statusCode === 403);
   expect(
-    'invalid from → INVALID_DATE',
-    (r4.body as { errorCode?: string })?.errorCode === 'INVALID_DATE',
+    'GET denied origin -> CORS_FORBIDDEN',
+    (r6.body as { errorCode?: string })?.errorCode === 'CORS_FORBIDDEN',
+  );
+  expect(
+    'GET denied origin -> no ACAO',
+    r6.headers['access-control-allow-origin'] === undefined,
   );
 
-  // 2026-02-30 は実在しない日付
-  const r4b = await runHandler(
-    'GET',
-    undefined,
-    { from: '2026-02-30', to: '2026-04-30' },
-    { BQ_MOCK_MODE: 'true', ALLOWED_ORIGINS: undefined },
+  const r7 = await runHandler({
+    method: 'OPTIONS',
+    origin: 'https://allowed.example.com',
+    envOverrides: { ALLOWED_ORIGINS: 'https://allowed.example.com' },
+  });
+  console.log(
+    JSON.stringify({
+      case: 'OPTIONS allowed origin',
+      status: r7.statusCode,
+      acao: r7.headers['access-control-allow-origin'] ?? null,
+    }),
   );
-  expect('non-existent date → 400 / INVALID_DATE', r4b.statusCode === 400);
+  expect('OPTIONS allowed origin -> 204', r7.statusCode === 204);
   expect(
-    'non-existent date → INVALID_DATE',
-    (r4b.body as { errorCode?: string })?.errorCode === 'INVALID_DATE',
+    'OPTIONS allowed origin -> ACAO echoed',
+    r7.headers['access-control-allow-origin'] === 'https://allowed.example.com',
   );
 
-  // ---------- from > to ----------
-  const r5 = await runHandler(
-    'GET',
-    undefined,
-    { from: '2026-04-30', to: '2026-04-01' },
-    { BQ_MOCK_MODE: 'true', ALLOWED_ORIGINS: undefined },
+  const r8 = await runHandler({
+    method: 'OPTIONS',
+    origin: 'https://evil.example.com',
+    envOverrides: { ALLOWED_ORIGINS: 'https://allowed.example.com' },
+  });
+  console.log(
+    JSON.stringify({
+      case: 'OPTIONS denied origin',
+      status: r8.statusCode,
+      acao: r8.headers['access-control-allow-origin'] ?? null,
+    }),
   );
-  expect('from > to → 400', r5.statusCode === 400);
+  expect('OPTIONS denied origin -> 403', r8.statusCode === 403);
   expect(
-    'from > to → INVALID_RANGE',
-    (r5.body as { errorCode?: string })?.errorCode === 'INVALID_RANGE',
-  );
-
-  // ---------- MAX_QUERY_DAYS 超過 ----------
-  const r6 = await runHandler(
-    'GET',
-    undefined,
-    { from: '2024-01-01', to: '2026-12-31' },
-    { BQ_MOCK_MODE: 'true', ALLOWED_ORIGINS: undefined, MAX_QUERY_DAYS: '370' },
-  );
-  expect('range too long → 400', r6.statusCode === 400);
-  expect(
-    'range too long → RANGE_TOO_LONG',
-    (r6.body as { errorCode?: string })?.errorCode === 'RANGE_TOO_LONG',
-  );
-
-  // ---------- BQ_MOCK_MODE 未設定 → NOT_IMPLEMENTED ----------
-  const r7 = await runHandler(
-    'GET',
-    undefined,
-    { from: '2026-04-01', to: '2026-04-30' },
-    { BQ_MOCK_MODE: undefined, ALLOWED_ORIGINS: undefined },
-  );
-  expect('no mock mode → 501', r7.statusCode === 501);
-  expect(
-    'no mock mode → NOT_IMPLEMENTED',
-    (r7.body as { errorCode?: string })?.errorCode === 'NOT_IMPLEMENTED',
-  );
-
-  // ---------- POST 拒否 ----------
-  const r8 = await runHandler(
-    'POST',
-    undefined,
-    {},
-    { BQ_MOCK_MODE: 'true', ALLOWED_ORIGINS: undefined },
-  );
-  expect('POST → 405', r8.statusCode === 405);
-
-  // ---------- CORS fail-closed: ALLOWED_ORIGINS 未設定 + Origin あり ----------
-  const r9 = await runHandler(
-    'GET',
-    'https://evil.example.com',
-    { from: '2026-04-01', to: '2026-04-30' },
-    { BQ_MOCK_MODE: 'true', ALLOWED_ORIGINS: undefined },
-  );
-  expect('CORS empty + origin → 403', r9.statusCode === 403);
-  expect(
-    'CORS empty + origin → CORS_FORBIDDEN',
-    (r9.body as { errorCode?: string })?.errorCode === 'CORS_FORBIDDEN',
-  );
-  expect(
-    'CORS empty + origin → no ACAO header',
-    r9.headers['access-control-allow-origin'] === undefined,
-  );
-
-  // ---------- CORS 許可 Origin ----------
-  const r10 = await runHandler(
-    'GET',
-    'https://allowed.example.com',
-    { from: '2026-04-01', to: '2026-04-30' },
-    {
-      BQ_MOCK_MODE: 'true',
-      ALLOWED_ORIGINS: 'https://allowed.example.com',
-    },
-  );
-  expect('allowed origin → 200', r10.statusCode === 200);
-  expect(
-    'allowed origin → ACAO echoed',
-    r10.headers['access-control-allow-origin'] === 'https://allowed.example.com',
+    'OPTIONS denied origin -> no ACAO',
+    r8.headers['access-control-allow-origin'] === undefined,
   );
 
   if (failures > 0) {

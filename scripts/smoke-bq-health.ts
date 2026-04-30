@@ -5,8 +5,8 @@
  * Usage:
  *   npx tsx scripts/smoke-bq-health.ts
  *
- * 実 GCP に接続するケースは扱わない。CONFIG_MISSING / CORS / OPTIONS / method
- * 周りの分岐と、isNotFoundError の判定ロジックのみを検証する。
+ * 実 GCP に接続するケースは扱わない。CONFIG_MISSING / mock mode / CORS /
+ * OPTIONS / method 周りの分岐と、isNotFoundError の判定ロジックのみを検証する。
  */
 import handler, { isNotFoundError } from '../api/bq/health';
 
@@ -68,9 +68,19 @@ async function runHandler(
   origin: string | undefined,
   envOverrides: Record<string, string | undefined>,
 ) {
+  const isolatedKeys = [
+    'BQ_MOCK_MODE',
+    'GCP_PROJECT_ID',
+    'GCP_SERVICE_ACCOUNT_JSON_BASE64',
+    'BQ_DATASET',
+    'BQ_LOCATION',
+    'ALLOWED_ORIGINS',
+    'MAX_QUERY_DAYS',
+  ];
   const before: Record<string, string | undefined> = {};
-  for (const [k, v] of Object.entries(envOverrides)) {
+  for (const k of isolatedKeys) {
     before[k] = process.env[k];
+    const v = envOverrides[k];
     if (v === undefined) delete process.env[k];
     else process.env[k] = v;
   }
