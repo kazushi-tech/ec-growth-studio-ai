@@ -23,6 +23,12 @@ coverage/
 .env.*
 !.env.example
 
+# GCP service account / credential JSON (絶対にコミットしない)
+*service-account*.json
+*credentials*.json
+gcp-key*.json
+service_account*.json
+
 # Editor / OS
 .vscode/*
 !.vscode/extensions.json
