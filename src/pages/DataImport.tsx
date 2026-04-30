@@ -157,6 +157,61 @@ export default function DataImport() {
           メモリ／ブラウザ保存のみ。外部送信なし。
         </div>
 
+        {/* Connection-state guide — explain what's real CSV vs demo vs not-yet-connected */}
+        <SectionCard
+          title="現在の接続状態（デモで見せられる範囲）"
+          icon={<Activity size={16} />}
+          action={
+            <Pill tone="gold" size="xs">
+              実GCP / 実API 未接続
+            </Pill>
+          }
+        >
+          <p className="text-[12px] leading-6 text-slate-700">
+            現時点では、<b>実GCP接続ではなく、CSVとBigQueryデモで月次運用フローを確認</b>できます。
+            実 GA4 API / 実 広告 API / 実 BigQuery / 実 AI API はまだ接続していません。
+            BigQueryデモは <b>BQ_MOCK_MODE=true の Preview のみ</b> 動作し、
+            Production は <b>BQ_MOCK_MODE 未設定なら安全停止</b>します（誤って実GCPに接続しない設計）。
+          </p>
+          <div className="mt-3 grid gap-3 lg:grid-cols-3">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+                <CheckCircle2 size={13} />
+                CSVで今すぐ試せる（実値）
+              </div>
+              <ul className="mt-2 space-y-1 text-[11px] leading-5 text-slate-700">
+                <li>・注文CSV — 売上 / 注文数 / AOV を実値で再計算</li>
+                <li>・GA4 CSV — セッション / CVR / チャネル別 を実値化</li>
+                <li>・広告CSV — ROAS / CPC / 効率悪化キャンペーンを実値化</li>
+              </ul>
+            </div>
+            <div className="rounded-xl border border-sky-200 bg-sky-50/40 p-3">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-sky-700">
+                <Beaker size={13} />
+                デモとして見せられる（接続後の再現）
+              </div>
+              <ul className="mt-2 space-y-1 text-[11px] leading-5 text-slate-700">
+                <li>・BigQueryデモ — <b>BQ_MOCK_MODE=true の Preview</b> では Dashboard上部のトグルでON</li>
+                <li>・<b>実GCP接続ではない</b>（mock応答 / GCP未接続）</li>
+                <li>・接続後にKPIがどう流れるかの見え方を再現</li>
+                <li>・Production は <b>BQ_MOCK_MODE 未設定なら安全停止</b>（誤って実GCPに繋がない設計）</li>
+              </ul>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-3">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                <Plug size={13} />
+                まだ未接続（将来予定）
+              </div>
+              <ul className="mt-2 space-y-1 text-[11px] leading-5 text-slate-700">
+                <li>・Shopify Admin API — Phase 4</li>
+                <li>・GA4 Data API / Google広告 / Meta広告 API — Phase 3 / 4</li>
+                <li>・実 BigQuery クエリ実行 — Phase 3 後続</li>
+                <li>・AI実生成（Anthropic SDK） — Phase 4</li>
+              </ul>
+            </div>
+          </div>
+        </SectionCard>
+
         {/* EC linkage stance — explain that we don't host the EC site */}
         <SectionCard title="ECサイト連携の考え方" icon={<Plug size={16} />}>
           <div className="grid gap-3 lg:grid-cols-3">

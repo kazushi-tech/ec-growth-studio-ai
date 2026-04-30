@@ -5,6 +5,34 @@
 CSVから始めて、商品ページ・広告・CRM・在庫を横断した改善を毎月回すための司令塔UIです。
 本リポジトリは **静的MVPプロトタイプ**（サンプルデータで動作）です。
 
+## 現在の接続状態（ひとめで分かる版）
+
+上司デモ・初回商談で **「実データに繋がっているのか」** と聞かれた時の回答テンプレ:
+
+| 種別 | 状態 | 内容 |
+| --- | --- | --- |
+| **CSVで実値化** | ✅ 動作中 | 注文 / GA4 / 広告の CSV をブラウザ内で取込み、売上 / 注文 / AOV / セッション / CVR / ROAS を実値で再計算 |
+| **BigQuery デモ Mode** | ✅ Previewのみ動作 / Productionは安全停止 | `BQ_MOCK_MODE=true` の Preview で `/api/bq/*` が `mode:"mock"` を返す。**実 GCP 接続ではなく、接続後の見え方の再現**。Production は `BQ_MOCK_MODE` 未設定なので `501 / NOT_IMPLEMENTED` で安全停止 |
+| **AI考察文言** | 🟡 サンプル | 静的な参考文。Phase 4 で Anthropic SDK + prompt cache に接続予定 |
+| **実 GCP / BigQuery 接続** | 🔴 未接続 | GCP プロジェクト / dataset / サービスアカウント / 課金 / Budget Alert は **未設定**。Phase 3 後続 PR で実装予定 |
+| **実 GA4 Data API** | 🔴 未接続 | Phase 3 / 4 で読み取り専用接続予定 |
+| **実 広告 API（Google / Meta）** | 🔴 未接続 | Phase 3 / 4 で読み取り専用接続予定 |
+| **実 Shopify Admin API** | 🔴 未接続 | Phase 4 で読み取り専用接続予定 |
+| **実 AI API（Anthropic / OpenAI）** | 🔴 未接続 | Phase 4 で接続予定（prompt cache 必須運用） |
+| **永続化（DB） / 認証** | 🔴 未接続 | Phase 4 で Supabase + Edge Functions / 認証実装予定 |
+
+> 上司デモでの説明文（コピペ用）:
+> 「現MVPは **CSV取込が実値、BigQueryデモが見え方の再現、AI考察はサンプル文言**。
+> 実 GCP・実 GA4 API・実 広告 API・実 AI API には未接続です。
+> 接続には **会社側の GCP プロジェクト・請求・サービスアカウント** が必要なので勝手に接続しません。
+> 本格接続は Phase 3 後続、AI実生成は Phase 4 で進めます。」
+>
+> BigQueryデモを上司に見せる場合の前提:
+> **`BQ_MOCK_MODE=true` を設定した Preview URL でだけ動く**。
+> Production（`https://ec-growth-studio-ai.vercel.app`）には **`BQ_MOCK_MODE` を入れない方針** のため、
+> Production で Dashboard 上部のトグルを ON にしても `/api/bq/orders-daily` は `501` で **安全停止** し、
+> KPIは CSV / サンプル値にフォールバックする（誤って実GCPに繋がない設計）。
+
 ---
 
 ## 起動方法
@@ -47,11 +75,12 @@ Node 18 以上推奨（開発は Node 24 で確認）。
 
 ## 未実装範囲（明示）
 
-- CSVパース・実データ取込
-- Shopify / GA4 / 広告 / BigQuery API連携
-- AI診断ロジック（Anthropic / OpenAI API 呼び出し）
+CSVパース（注文 / GA4 / 広告）は Phase 1〜2.5 で **実装済み**。以下は **未実装** で意図的に除外している:
+
+- Shopify Admin API / GA4 Data API / Google広告 / Meta広告 / 実 BigQuery クエリの直接連携
+- AI診断ロジック（Anthropic / OpenAI API 呼び出し / prompt cache）
 - 認証・組織管理・マルチテナント
-- 永続化バックエンド（DB / ストレージ）
+- 永続化バックエンド（Supabase / Edge Functions などの DB / ストレージ）
 - レポートPDF / PowerPoint 出力
 - 効果検証の実データ計測
 
@@ -83,6 +112,7 @@ Phase 3A は `/api/bq/health` と `/api/bq/orders-daily` の 2 本を Vercel Fun
 
 GCP 設定なし・課金なし・サービスアカウントなしで Phase 3A の画面動線を確認するための **デモデータ表示モード**。
 **実データ連携ではない**ので、UI / docs 上で「BigQuery 接続済み」と扱わないこと。
+**`BQ_MOCK_MODE=true` の Preview でのみ動作**し、**Production は `BQ_MOCK_MODE` 未設定なら安全停止**する設計。
 
 ```sh
 # Vercel Functions をローカル/Preview で動かす場合

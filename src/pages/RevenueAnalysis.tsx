@@ -570,6 +570,19 @@ export default function RevenueAnalysis() {
       />
 
       <div className="space-y-5 px-6 py-5">
+        {/* Source-label legend — explain what each pill means */}
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/40 px-4 py-2 text-[11px] text-slate-600">
+          <span className="font-semibold text-slate-700">凡例:</span>
+          <Pill tone="mint" size="xs">注文CSV実値</Pill>
+          <Pill tone="sky" size="xs">GA4実値</Pill>
+          <Pill tone="rose" size="xs">広告CSV実値</Pill>
+          <Pill tone="slate" size="xs">推定値</Pill>
+          <span className="text-slate-500">
+            — 実値はCSV取込から算出。推定値は静的サンプル（前月分などCSV未対応の値）。
+            実 GCP / 実 GA4 API / 実 広告 API は未接続。
+          </span>
+        </div>
+
         {/* Real-data status banner */}
         {(ga4Import || ordersImport || adsImport) && (
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-2.5 text-[12px] text-emerald-800">
