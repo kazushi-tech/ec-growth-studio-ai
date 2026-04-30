@@ -170,6 +170,8 @@ export default function DataImport() {
           <p className="text-[12px] leading-6 text-slate-700">
             現時点では、<b>実GCP接続ではなく、CSVとBigQueryデモで月次運用フローを確認</b>できます。
             実 GA4 API / 実 広告 API / 実 BigQuery / 実 AI API はまだ接続していません。
+            BigQueryデモは <b>BQ_MOCK_MODE=true の Preview のみ</b> 動作し、
+            Production は <b>BQ_MOCK_MODE 未設定なら安全停止</b>します（誤って実GCPに接続しない設計）。
           </p>
           <div className="mt-3 grid gap-3 lg:grid-cols-3">
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
@@ -189,9 +191,10 @@ export default function DataImport() {
                 デモとして見せられる（接続後の再現）
               </div>
               <ul className="mt-2 space-y-1 text-[11px] leading-5 text-slate-700">
-                <li>・BigQueryデモ — Dashboard上部のトグルでON</li>
+                <li>・BigQueryデモ — <b>BQ_MOCK_MODE=true の Preview</b> では Dashboard上部のトグルでON</li>
                 <li>・<b>実GCP接続ではない</b>（mock応答 / GCP未接続）</li>
                 <li>・接続後にKPIがどう流れるかの見え方を再現</li>
+                <li>・Production は <b>BQ_MOCK_MODE 未設定なら安全停止</b>（誤って実GCPに繋がない設計）</li>
               </ul>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-3">

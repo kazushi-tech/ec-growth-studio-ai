@@ -46,6 +46,22 @@
 > 補足の言い回し: 「画面に並んでいる **実値 / デモ / 未接続 / 将来予定** のラベルが、
 > どの数字が本当に動いていて、どこが Phase 3 / Phase 4 で繋がるかを毎画面で示しています。」
 
+#### BigQueryデモを上司デモで見せる場合の前提（重要）
+
+BigQueryデモ Mode は **Vercel の `BQ_MOCK_MODE=true` が設定された Preview URL** でだけ動く。
+Production（`https://ec-growth-studio-ai.vercel.app`）には **`BQ_MOCK_MODE` を入れない方針** のため、
+Production で Dashboard 上部のトグルを ON にしても `/api/bq/orders-daily` は
+`501 / NOT_IMPLEMENTED` を返して **安全停止** し、KPIは CSV / サンプル値にフォールバックする。
+
+| 環境 | `BQ_MOCK_MODE` | BigQueryデモ トグル ON 時の挙動 |
+| --- | --- | --- |
+| Preview（デモ用） | `true` | `mode:"mock"` の固定 response が KPI に流れる（接続後の見え方の再現） |
+| Production | 未設定 | `/api/bq/orders-daily` が `501 / NOT_IMPLEMENTED` で安全停止し、CSV/サンプル値にフォールバック |
+| Production（実 GCP 接続後） | 未設定（`BQ_MOCK_MODE` は使わない） | Phase 3 後続 PR で実装予定。本PRでは実装しない |
+
+つまり **「BigQueryデモを上司に見せる」ときは、必ず `BQ_MOCK_MODE=true` の Preview URL を開いてからデモする**。
+Production をそのまま開いてトグルを ON にしても何も起きない（誤って実GCPに繋がない設計）。
+
 ---
 
 ## 1. 5分版デモ（最短で価値を伝える）

@@ -639,10 +639,10 @@ function DataStateSummary({
       note: adsImport ? "ROAS / CPC / CVR を実値で反映" : "CSV取込対応・実API未接続",
     },
     {
-      label: "BigQuery",
-      state: bqDemoEnabled ? "デモ表示中" : "デモ可 / GCP未接続",
+      label: "BigQueryデモ",
+      state: bqDemoEnabled ? "デモ表示中（mock）" : "Previewでデモ可",
       tone: bqDemoEnabled ? "sky" : "gold",
-      note: "実GCP接続なし。接続後の見え方を再現",
+      note: "BQ_MOCK_MODE=true の環境でのみ mock データを表示。Production は未設定なら安全停止（実GCP接続ではない）",
     },
     {
       label: "AI考察",
