@@ -14,6 +14,7 @@ import {
   Database,
   Lightbulb,
   AlertCircle,
+  Info,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import KpiCard from "../components/ui/KpiCard";
@@ -38,6 +39,14 @@ import { buildKpisFromBqDemo } from "../lib/bq/buildKpisFromBqDemo";
 
 type DataSource = "bq-demo" | "csv" | "sample";
 
+// `/api/bq/orders-daily` から `NOT_IMPLEMENTED` が返るのは Production の安全停止仕様
+// （`BQ_MOCK_MODE` 未設定で実 BigQuery クエリ未実装）。これを「壊れた」ではなく
+// 「Preview 専用デモが Production では安全停止中」という案内として扱うため、
+// 通常の取得失敗とはトーンを分ける。
+type BqDemoFailure =
+  | { kind: "unavailable" }
+  | { kind: "error"; message: string };
+
 export default function Dashboard() {
   const { ordersImport, ga4Import, adsImport } = useImport();
   const top5 = actions.slice(0, 5);
@@ -47,18 +56,20 @@ export default function Dashboard() {
   const [bqDemoData, setBqDemoData] = useState<BqOrdersDailySuccess | null>(
     null,
   );
-  const [bqDemoError, setBqDemoError] = useState<string | null>(null);
+  const [bqDemoFailure, setBqDemoFailure] = useState<BqDemoFailure | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!bqDemoEnabled) {
       setBqDemoData(null);
-      setBqDemoError(null);
+      setBqDemoFailure(null);
       setBqDemoLoading(false);
       return;
     }
     const controller = new AbortController();
     setBqDemoLoading(true);
-    setBqDemoError(null);
+    setBqDemoFailure(null);
     fetchBqOrdersDaily({
       from: BQ_DEMO_DEFAULT_FROM,
       to: BQ_DEMO_DEFAULT_TO,
@@ -70,13 +81,17 @@ export default function Dashboard() {
       })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return;
-        const message =
-          err instanceof BqFetchError
-            ? `${err.errorCode}: ${err.message}`
-            : err instanceof Error
-              ? err.message
-              : "BigQueryデモの取得に失敗しました";
-        setBqDemoError(message);
+        if (err instanceof BqFetchError && err.errorCode === "NOT_IMPLEMENTED") {
+          setBqDemoFailure({ kind: "unavailable" });
+        } else {
+          const message =
+            err instanceof BqFetchError
+              ? `${err.errorCode}: ${err.message}`
+              : err instanceof Error
+                ? err.message
+                : "BigQueryデモの取得に失敗しました";
+          setBqDemoFailure({ kind: "error", message });
+        }
         setBqDemoLoading(false);
         setBqDemoData(null);
       });
@@ -126,6 +141,7 @@ export default function Dashboard() {
           bqDemoLoading={bqDemoLoading}
           onToggleBqDemo={() => setBqDemoEnabled((v) => !v)}
           bqDemoMeta={bqDemoData}
+          bqDemoFailure={bqDemoFailure}
         />
 
         <DataStateSummary
@@ -133,13 +149,36 @@ export default function Dashboard() {
           ga4Import={ga4Import}
           adsImport={adsImport}
           bqDemoEnabled={bqDemoEnabled}
+          bqDemoFailure={bqDemoFailure}
         />
 
-        {bqDemoError && (
+        {bqDemoFailure?.kind === "unavailable" && (
+          <div className="flex flex-wrap items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-[11px] text-amber-900">
+            <Info size={14} className="mt-0.5 shrink-0 text-amber-700" />
+            <div className="flex-1 space-y-1">
+              <div className="text-xs font-semibold text-amber-900">
+                BigQueryデモは Preview 環境専用です
+              </div>
+              <p className="leading-5 text-amber-800">
+                Production では実GCPへ誤接続しないよう安全停止しています。CSV / サンプル値を表示中です。
+                BigQuery接続後の見え方は <span className="font-mono">BQ_MOCK_MODE=true</span> の Preview で確認できます。
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBqDemoEnabled(false)}
+              className="ml-auto text-amber-800 hover:text-amber-900"
+            >
+              トグルをOFFにする →
+            </button>
+          </div>
+        )}
+
+        {bqDemoFailure?.kind === "error" && (
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-rose-200 bg-rose-50/70 px-4 py-2 text-[11px] text-rose-800">
             <AlertCircle size={12} />
             <span className="font-semibold">BigQueryデモの取得に失敗:</span>
-            <span className="font-mono">{bqDemoError}</span>
+            <span className="font-mono">{bqDemoFailure.message}</span>
             <span className="text-rose-700/70">
               （CSV/サンプル値にフォールバック）
             </span>
@@ -538,12 +577,14 @@ function DataSourceBar({
   bqDemoLoading,
   onToggleBqDemo,
   bqDemoMeta,
+  bqDemoFailure,
 }: {
   source: DataSource;
   bqDemoEnabled: boolean;
   bqDemoLoading: boolean;
   onToggleBqDemo: () => void;
   bqDemoMeta: BqOrdersDailySuccess | null;
+  bqDemoFailure: BqDemoFailure | null;
 }) {
   const sourceLabel =
     source === "bq-demo"
@@ -553,6 +594,21 @@ function DataSourceBar({
         : "サンプル";
   const sourceTone =
     source === "bq-demo" ? "mint" : source === "csv" ? "sky" : "slate";
+
+  // ON 時のトグル右側のステータス文言。
+  // - 取得中
+  // - Production 安全停止（NOT_IMPLEMENTED）→ Preview 専用 / 安全停止
+  // - 取得失敗（その他のエラー）→ 取得失敗
+  // - 取得成功 → デモデータ表示中
+  const toggleStatus = bqDemoLoading
+    ? "取得中…"
+    : !bqDemoEnabled
+      ? "OFF"
+      : bqDemoFailure?.kind === "unavailable"
+        ? "ON（Preview専用 / 安全停止中）"
+        : bqDemoFailure?.kind === "error"
+          ? "ON（取得失敗）"
+          : "ON（デモデータ表示中）";
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white/60 px-4 py-2.5 text-[11px] text-slate-600">
@@ -582,13 +638,12 @@ function DataSourceBar({
           />
         </button>
         <span className="font-medium text-slate-700">BigQueryデモ</span>
-        <span className="text-[10px] text-slate-400">
-          {bqDemoLoading
-            ? "取得中…"
-            : bqDemoEnabled
-              ? "ON（デモデータ表示中）"
-              : "OFF"}
-        </span>
+        <span className="text-[10px] text-slate-400">{toggleStatus}</span>
+        {bqDemoFailure?.kind === "unavailable" && (
+          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-100">
+            Preview専用
+          </span>
+        )}
       </div>
 
       <div className="ml-auto flex items-center gap-2 text-[10px] text-slate-400">
@@ -596,7 +651,9 @@ function DataSourceBar({
         <span>
           {source === "bq-demo" && bqDemoMeta
             ? `期間 ${bqDemoMeta.from}〜${bqDemoMeta.to} / ${bqDemoMeta.rows.length}日 / mode:mock`
-            : "実BigQuery接続ではありません"}
+            : bqDemoFailure?.kind === "unavailable"
+              ? "Production安全停止中（実BigQuery接続ではありません）"
+              : "実BigQuery接続ではありません"}
         </span>
       </div>
     </div>
@@ -608,12 +665,39 @@ function DataStateSummary({
   ga4Import,
   adsImport,
   bqDemoEnabled,
+  bqDemoFailure,
 }: {
   ordersImport: { fileName: string } | null;
   ga4Import: { fileName: string } | null;
   adsImport: { fileName: string } | null;
   bqDemoEnabled: boolean;
+  bqDemoFailure: BqDemoFailure | null;
 }) {
+  // ON だが Production の安全停止に当たっている場合は「デモ表示中」とは見せない。
+  const bqDemoCard = bqDemoEnabled
+    ? bqDemoFailure?.kind === "unavailable"
+      ? {
+          state: "Production安全停止中",
+          tone: "gold" as const,
+          note: "Production は BQ_MOCK_MODE 未設定で安全停止。デモは Preview 環境で確認可（実GCP接続ではない）",
+        }
+      : bqDemoFailure?.kind === "error"
+        ? {
+            state: "取得失敗 / フォールバック",
+            tone: "gold" as const,
+            note: "BigQueryデモの取得に失敗。CSV / サンプル値で表示中（実GCP接続ではない）",
+          }
+        : {
+            state: "デモ表示中（mock）",
+            tone: "sky" as const,
+            note: "BQ_MOCK_MODE=true の環境でのみ mock データを表示（実GCP接続ではない）",
+          }
+    : {
+        state: "Previewでデモ可",
+        tone: "gold" as const,
+        note: "BQ_MOCK_MODE=true の Preview でのみ mock データを表示。Production は未設定なら安全停止（実GCP接続ではない）",
+      };
+
   const items: {
     label: string;
     state: string;
@@ -640,9 +724,9 @@ function DataStateSummary({
     },
     {
       label: "BigQueryデモ",
-      state: bqDemoEnabled ? "デモ表示中（mock）" : "Previewでデモ可",
-      tone: bqDemoEnabled ? "sky" : "gold",
-      note: "BQ_MOCK_MODE=true の環境でのみ mock データを表示。Production は未設定なら安全停止（実GCP接続ではない）",
+      state: bqDemoCard.state,
+      tone: bqDemoCard.tone,
+      note: bqDemoCard.note,
     },
     {
       label: "AI考察",

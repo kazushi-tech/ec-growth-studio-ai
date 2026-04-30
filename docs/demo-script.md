@@ -62,6 +62,9 @@ Production で Dashboard 上部のトグルを ON にしても `/api/bq/orders-d
 つまり **「BigQueryデモを上司に見せる」ときは、必ず `BQ_MOCK_MODE=true` の Preview URL を開いてからデモする**。
 Production をそのまま開いてトグルを ON にしても何も起きない（誤って実GCPに繋がない設計）。
 
+> Production でトグルを ON にした場合、画面には赤いエラーではなく **「BigQueryデモは Preview 環境専用です」** という
+> amber 系の安全停止案内が表示される（KPIは CSV / サンプル値のまま）。これは故障ではなく、未接続状態を安全に見せる UI である。
+
 ---
 
 ## 1. 5分版デモ（最短で価値を伝える）
