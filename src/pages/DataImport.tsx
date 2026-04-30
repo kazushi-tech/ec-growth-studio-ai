@@ -1565,17 +1565,23 @@ export default function DataImport() {
             className="lg:col-span-3"
             title="API連携（任意・将来的に拡張可能）"
             icon={<Plug size={16} />}
+            action={
+              <Pill tone="gold" size="xs">
+                次フェーズで対応
+              </Pill>
+            }
           >
             <p className="text-[11px] leading-6 text-slate-500">
               API連携なしでもCSVで月次診断を開始できます。
+              実APIへの接続は Phase 3 / 4 で読み取り専用で順次追加予定です。
             </p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               {[
-                { l: "Shopify", s: "任意・未接続" },
-                { l: "GA4", s: "任意・未接続" },
-                { l: "Google広告", s: "未接続" },
-                { l: "Meta広告", s: "未接続" },
-                { l: "BigQuery", s: "任意" },
+                { l: "Shopify", s: "Phase 4で対応", phase: "P4" as const },
+                { l: "GA4", s: "Phase 3で対応", phase: "P3" as const },
+                { l: "Google広告", s: "Phase 3で対応", phase: "P3" as const },
+                { l: "Meta広告", s: "Phase 4で対応", phase: "P4" as const },
+                { l: "BigQuery", s: "Phase 3で対応", phase: "P3" as const },
               ].map((x) => (
                 <div
                   key={x.l}
@@ -1585,8 +1591,13 @@ export default function DataImport() {
                     {x.l}
                   </div>
                   <div className="text-[10px] text-slate-500">{x.s}</div>
-                  <button className="mt-1.5 w-full rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-50">
-                    接続する
+                  <button
+                    type="button"
+                    disabled
+                    title="本MVPでは未接続。Phase 3 / 4 で読み取り専用接続を予定"
+                    className="mt-1.5 w-full cursor-not-allowed rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-400"
+                  >
+                    {x.phase} で対応
                   </button>
                 </div>
               ))}
