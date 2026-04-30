@@ -8,10 +8,15 @@ import {
   TrendingUp,
   CheckCircle2,
   ArrowRight,
+  CalendarClock,
+  User,
+  MessageSquare,
+  Target,
+  Users,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import SectionCard from "../components/ui/SectionCard";
-import Pill, { priorityTone } from "../components/ui/Pill";
+import Pill, { priorityTone, statusTone } from "../components/ui/Pill";
 import Sparkline from "../components/ui/Sparkline";
 import { actions, monthlyStats } from "../data/sample";
 import type { Action } from "../data/sample";
@@ -51,6 +56,22 @@ export default function ActionBoard() {
     ...c,
     items: actions.filter((a) => a.status === c.key),
   }));
+
+  const ownerLoad = Object.entries(
+    actions.reduce<Record<string, number>>((acc, a) => {
+      acc[a.owner] = (acc[a.owner] ?? 0) + 1;
+      return acc;
+    }, {}),
+  )
+    .map(([owner, count]) => ({ owner, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const reviewQueue = actions.filter(
+    (a) => a.status === "レビュー中" || a.reviewComment,
+  );
+
+  const p1Count = actions.filter((a) => a.priority === "P1").length;
+  const p2Count = actions.filter((a) => a.priority === "P2").length;
 
   return (
     <>
@@ -103,6 +124,73 @@ export default function ActionBoard() {
             </div>
           </div>
         </SectionCard>
+
+        {/* Operations split — owner load + review queue */}
+        <div className="grid gap-5 lg:grid-cols-12">
+          <SectionCard
+            className="lg:col-span-5"
+            title="担当別ロード"
+            icon={<Users size={16} />}
+            action={
+              <span className="text-[11px] text-slate-500">
+                合計 {actions.length} 件 / P1 {p1Count} ・ P2 {p2Count}
+              </span>
+            }
+          >
+            <div className="space-y-2">
+              {ownerLoad.map((o) => {
+                const pct = Math.min(100, (o.count / Math.max(1, actions.length)) * 100);
+                return (
+                  <div key={o.owner} className="rounded-lg border border-slate-100 bg-white p-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5 font-medium text-slate-700">
+                        <User size={12} className="text-slate-400" />
+                        {o.owner}
+                      </span>
+                      <span className="text-slate-500">
+                        {o.count} 件 ({Math.round(pct)}%)
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-navy-700"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[10px] text-slate-400">
+              ※ 月次BPaaS伴走では、担当者あたり 5件以下を目安に配分する想定。
+            </p>
+          </SectionCard>
+
+          <SectionCard
+            className="lg:col-span-7"
+            title="レビューコメント / 確認待ち"
+            icon={<MessageSquare size={16} />}
+            action={
+              <span className="text-[11px] text-slate-500">
+                {reviewQueue.length} 件
+              </span>
+            }
+          >
+            <div className="space-y-2">
+              {reviewQueue.slice(0, 4).map((a) => (
+                <ReviewRow key={a.id} action={a} />
+              ))}
+              {reviewQueue.length === 0 && (
+                <p className="text-[11px] text-slate-500">
+                  レビュー指摘はありません。
+                </p>
+              )}
+            </div>
+            <p className="mt-2 text-[10px] text-slate-400">
+              ※ 月次定例（5/7）までに反映予定。指摘は AI考察 → 担当者レビュー × BPaaS PM コメントの3層で残す。
+            </p>
+          </SectionCard>
+        </div>
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
@@ -306,6 +394,12 @@ function ActionCard({ action: a }: { action: Action }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
       <div className="flex flex-wrap items-center gap-1">
+        <Pill tone={priorityTone(a.priority)} size="xs">
+          {a.priority}
+        </Pill>
+        <Pill tone={statusTone(a.status)} size="xs">
+          {a.status}
+        </Pill>
         <Pill tone="slate" size="xs">
           {a.area}
         </Pill>
@@ -315,26 +409,27 @@ function ActionCard({ action: a }: { action: Action }) {
           </Pill>
         )}
       </div>
-      <div className="mt-1.5 flex items-start justify-between gap-1.5">
-        <div className="text-[13px] font-semibold leading-snug text-slate-800">
-          {a.title}
-        </div>
-        <Pill tone={priorityTone(a.priority)} size="xs">
-          {a.priority}
-        </Pill>
+      <div className="mt-1.5 text-[13px] font-semibold leading-snug text-slate-800">
+        {a.title}
       </div>
-      <div className="mt-1.5 text-[11px] font-medium text-emerald-600">
-        {a.expected}
+      <div className="mt-1.5 flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+        <Target size={11} />
+        期待効果: {a.expected}
       </div>
       <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-slate-100 pt-2 text-[11px] text-slate-500">
+        <div className="flex items-center gap-1">
+          <User size={11} className="text-slate-400" />
+          <span className="text-slate-700">{a.owner}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <CalendarClock size={11} className="text-slate-400" />
+          <span className="text-slate-700">{a.due}</span>
+        </div>
         <div>
           工数: <span className="text-slate-700">{a.effort}</span>
         </div>
         <div>
-          期限: <span className="text-slate-700">{a.due}</span>
-        </div>
-        <div className="col-span-2">
-          担当: <span className="text-slate-700">{a.owner}</span>
+          影響: <span className="text-slate-700">{a.impact}</span>
         </div>
       </div>
       <div className="mt-1.5 space-y-1 text-[11px] text-slate-500">
@@ -350,6 +445,67 @@ function ActionCard({ action: a }: { action: Action }) {
           <span className="text-slate-400">次アクション:</span>{" "}
           <span className="text-slate-700">{a.next}</span>
         </div>
+      </div>
+      {a.reviewComment && (
+        <div className="mt-2 rounded-md border border-amber-100 bg-amber-50/70 p-2 text-[11px] text-amber-800">
+          <div className="flex items-center gap-1 font-semibold">
+            <MessageSquare size={11} />
+            レビューコメント
+            {a.reviewer && (
+              <span className="ml-auto text-[10px] font-normal text-amber-700/80">
+                {a.reviewer}
+                {a.reviewedAt && ` ・ ${a.reviewedAt}`}
+              </span>
+            )}
+          </div>
+          <p className="mt-1 leading-snug">{a.reviewComment}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReviewRow({ action: a }: { action: Action }) {
+  return (
+    <div className="rounded-lg border border-slate-100 bg-white p-2.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Pill tone={priorityTone(a.priority)} size="xs">
+          {a.priority}
+        </Pill>
+        <Pill tone={statusTone(a.status)} size="xs">
+          {a.status}
+        </Pill>
+        <span className="text-[12px] font-medium text-slate-800">{a.title}</span>
+      </div>
+      {a.reviewComment ? (
+        <p className="mt-1.5 text-[11px] leading-relaxed text-slate-700">
+          <MessageSquare size={11} className="mr-1 inline text-amber-500" />
+          {a.reviewComment}
+        </p>
+      ) : (
+        <p className="mt-1.5 text-[11px] text-slate-500">
+          レビュー指摘は未記入
+        </p>
+      )}
+      <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
+        <span className="flex items-center gap-1">
+          <User size={11} className="text-slate-400" />
+          {a.owner}
+        </span>
+        <span className="flex items-center gap-1">
+          <CalendarClock size={11} className="text-slate-400" />
+          {a.due}
+        </span>
+        <span className="flex items-center gap-1 text-emerald-700">
+          <Target size={11} />
+          {a.expected}
+        </span>
+        {a.reviewer && (
+          <span className="ml-auto text-[10px] text-slate-400">
+            {a.reviewer}
+            {a.reviewedAt && ` ・ ${a.reviewedAt}`}
+          </span>
+        )}
       </div>
     </div>
   );
