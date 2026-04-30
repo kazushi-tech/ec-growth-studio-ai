@@ -489,7 +489,7 @@ export default function MonthlyReport() {
                 PowerPointで出力
               </button>
             </div>
-            <p className="mt-2 text-[10px] text-slate-400">
+            <p className="mt-2 text-[11px] text-slate-400">
               ※ 自動出力は Phase 4 で実装予定。現状は UI 上のレイアウトを担当者が確認する用途。
             </p>
           </SectionCard>
@@ -585,7 +585,7 @@ function CoverMeta({
 }) {
   return (
     <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-slate-500">
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-500">
         <span className="text-slate-400">{icon}</span>
         {label}
       </div>
@@ -605,7 +605,7 @@ function SectionTitle({
 }) {
   return (
     <div>
-      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
         {icon && <span className="text-slate-400">{icon}</span>}
         {eyebrow}
       </div>
@@ -749,7 +749,13 @@ function DonutItem({ percent, label }: { percent: number; label: string }) {
     <div className="rounded-xl border border-slate-100 bg-white p-3">
       <div className="text-[11px] text-slate-500">{label}</div>
       <div className="mt-1 flex items-center gap-2">
-        <svg width="48" height="48" viewBox="0 0 48 48">
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 48 48"
+          role="img"
+          aria-label={`${label} ${percent}%`}
+        >
           <circle
             cx="24"
             cy="24"
@@ -842,7 +848,7 @@ function FormatCard({
     >
       <div className="text-xs font-semibold">{label}</div>
       {muted && (
-        <div className="mt-0.5 text-[10px] text-slate-400">{muted}</div>
+        <div className="mt-0.5 text-[11px] text-slate-400">{muted}</div>
       )}
     </div>
   );
@@ -876,7 +882,7 @@ function CheckRow({
         <div>
           <div className="text-xs font-medium text-slate-800">{label}</div>
           {detail && (
-            <div className="text-[10px] text-slate-500">{detail}</div>
+            <div className="text-[11px] text-slate-500">{detail}</div>
           )}
         </div>
       </div>

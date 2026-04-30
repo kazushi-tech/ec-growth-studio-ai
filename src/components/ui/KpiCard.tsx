@@ -46,7 +46,12 @@ export default function KpiCard({ kpi }: { kpi: Kpi }) {
       </div>
       <div className="mt-1 text-[11px] text-slate-400">{kpi.deltaLabel}</div>
       <div className="-mx-1 mt-2 h-12">
-        <Sparkline data={kpi.spark} color={lineColor} fill={fillColor} />
+        <Sparkline
+          data={kpi.spark}
+          color={lineColor}
+          fill={fillColor}
+          ariaLabel={`${kpi.label} の推移 (直近${kpi.spark.length}期間, ${kpi.delta} ${kpi.deltaLabel})`}
+        />
       </div>
     </div>
   );

@@ -611,10 +611,10 @@ function HeroMock() {
             { l: "リピート率", v: "28.6%", d: "+2.1pt", up: true },
           ].map((k) => (
             <div key={k.l} className="rounded-md border border-slate-100 p-3">
-              <div className="text-[10px] text-slate-500">{k.l}</div>
+              <div className="text-[11px] text-slate-500">{k.l}</div>
               <div className="mt-1 text-lg font-bold text-slate-900">{k.v}</div>
               <div
-                className={`text-[10px] font-semibold ${
+                className={`text-[11px] font-semibold ${
                   k.up ? "text-emerald-600" : "text-rose-600"
                 }`}
               >
@@ -635,7 +635,7 @@ function HeroMock() {
               className="flex items-center justify-between rounded-md bg-slate-50 px-2.5 py-1.5"
             >
               <span className="text-slate-700">{t}</span>
-              <span className="flex items-center gap-2 text-[10px] text-slate-500">
+              <span className="flex items-center gap-2 text-[11px] text-slate-500">
                 <span className="rounded bg-rose-100 px-1.5 py-0.5 font-semibold text-rose-700">
                   {p}
                 </span>
