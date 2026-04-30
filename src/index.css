@@ -28,6 +28,7 @@
   button:focus-visible,
   summary:focus-visible,
   [role="button"]:focus-visible,
+  [role="separator"]:focus-visible,
   [role="switch"]:focus-visible,
   [role="tab"]:focus-visible,
   input:focus-visible,
@@ -40,6 +41,7 @@
   /* Sidebar / モバイルナビ等の暗背景は emerald リングでコントラスト確保 */
   .bg-navy-950 a:focus-visible,
   .bg-navy-950 button:focus-visible,
+  .bg-navy-950 [role="separator"]:focus-visible,
   .bg-navy-900 a:focus-visible,
   .bg-navy-900 button:focus-visible {
     outline-color: theme("colors.emerald.300");
