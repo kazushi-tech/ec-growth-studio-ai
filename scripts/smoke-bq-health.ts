@@ -100,6 +100,7 @@ async function main() {
     GCP_PROJECT_ID: undefined,
     GCP_SERVICE_ACCOUNT_JSON_BASE64: undefined,
     ALLOWED_ORIGINS: undefined,
+    BQ_MOCK_MODE: undefined,
   });
   console.log(JSON.stringify({ case: 'GET no-creds', status: r1.statusCode, body: r1.body }));
   expect('GET no-creds → 200', r1.statusCode === 200);
@@ -109,6 +110,38 @@ async function main() {
       (r1.body as { errorCode?: string })?.errorCode === 'CONFIG_MISSING',
   );
   expect('GET no-creds → no secret leak', !leaksSecret(r1.body));
+
+  // ---------- BQ_MOCK_MODE=true: GCP 認証なしでも ok:true / mode:"mock" ----------
+  const rMock = await runHandler('GET', undefined, {
+    GCP_PROJECT_ID: undefined,
+    GCP_SERVICE_ACCOUNT_JSON_BASE64: undefined,
+    ALLOWED_ORIGINS: undefined,
+    BQ_MOCK_MODE: 'true',
+  });
+  console.log(JSON.stringify({ case: 'GET mock-mode', status: rMock.statusCode, body: rMock.body }));
+  expect('mock-mode → 200', rMock.statusCode === 200);
+  expect(
+    'mock-mode → ok:true',
+    (rMock.body as { ok?: boolean })?.ok === true,
+  );
+  expect(
+    'mock-mode → mode:"mock"',
+    (rMock.body as { mode?: string })?.mode === 'mock',
+  );
+  expect(
+    'mock-mode → projectId masked as "mock-project"',
+    (rMock.body as { projectId?: string })?.projectId === 'mock-project',
+  );
+  expect(
+    'mock-mode → location:"mock"',
+    (rMock.body as { location?: string })?.location === 'mock',
+  );
+  expect(
+    'mock-mode → message mentions demo/no-connection',
+    typeof (rMock.body as { message?: string })?.message === 'string' &&
+      ((rMock.body as { message?: string }).message ?? '').toLowerCase().includes('demo'),
+  );
+  expect('mock-mode → no secret leak', !leaksSecret(rMock.body));
 
   // ---------- POST 拒否（Origin なし = same-origin 扱いで通過 → 405） ----------
   const r2 = await runHandler('POST', undefined, { ALLOWED_ORIGINS: undefined });

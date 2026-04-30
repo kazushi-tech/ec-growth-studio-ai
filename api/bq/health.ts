@@ -1,5 +1,15 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { BigQuery } from '@google-cloud/bigquery';
+import {
+  applyCors,
+  jsonFailure,
+  safeMessage,
+  isMockMode,
+  MOCK_PROJECT_ID,
+  MOCK_LOCATION,
+  DEFAULT_DATASET,
+  MOCK_MESSAGE,
+} from './_shared';
 
 type ErrorCode =
   | 'CONFIG_MISSING'
@@ -10,46 +20,23 @@ type ErrorCode =
   | 'CORS_FORBIDDEN'
   | 'UNKNOWN';
 
+type Mode = 'live' | 'mock';
+
 interface HealthSuccess {
   ok: true;
+  mode: Mode;
   projectId: string;
   dataset: string;
   location: string;
   datasetExists: boolean;
   checkedAt: string;
   latencyMs: number;
+  message?: string;
 }
-
-interface HealthFailure {
-  ok: false;
-  errorCode: ErrorCode;
-  message: string;
-  checkedAt: string;
-}
-
-const SECRET_KEY_HINTS = ['private_key', 'client_email', 'client_id', 'private_key_id'];
 
 function maskProjectId(id: string): string {
   if (id.length <= 6) return '***';
   return `${id.slice(0, 3)}***${id.slice(-3)}`;
-}
-
-function sanitizeMessage(raw: string): string {
-  let msg = raw;
-  for (const key of SECRET_KEY_HINTS) {
-    const re = new RegExp(`${key}\\s*[:=]\\s*"[^"]*"`, 'gi');
-    msg = msg.replace(re, `${key}:"[REDACTED]"`);
-  }
-  msg = msg.replace(/-----BEGIN[^-]+-----[\s\S]*?-----END[^-]+-----/g, '[REDACTED_PEM]');
-  msg = msg.replace(/eyJ[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+/g, '[REDACTED_JWT]');
-  if (msg.length > 500) msg = `${msg.slice(0, 500)}...`;
-  return msg;
-}
-
-function safeMessage(err: unknown): string {
-  if (err instanceof Error) return sanitizeMessage(err.message);
-  if (typeof err === 'string') return sanitizeMessage(err);
-  return 'Unknown error';
 }
 
 /**
@@ -71,57 +58,6 @@ export function isNotFoundError(err: unknown): boolean {
   return false;
 }
 
-function parseAllowedOrigins(): string[] {
-  return (process.env.ALLOWED_ORIGINS ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-/**
- * fail-closed CORS:
- * - Origin ヘッダなし: same-origin / curl / サーバー間呼び出しと見なし許可（CORS 関連ヘッダは付けない）
- * - Origin あり + ALLOWED_ORIGINS に含まれる: 許可（Access-Control-Allow-Origin を返す）
- * - Origin あり + ALLOWED_ORIGINS 未設定 or 不一致: 拒否（CORS ヘッダを一切付けない）
- */
-function applyCors(req: VercelRequest, res: VercelResponse): { allowed: boolean; origin: string } {
-  const origin = (req.headers.origin as string | undefined) ?? '';
-  const allowedList = parseAllowedOrigins();
-
-  res.setHeader('Cache-Control', 'no-store');
-
-  if (origin === '') {
-    return { allowed: true, origin };
-  }
-
-  const matched = allowedList.includes(origin);
-  if (!matched) {
-    return { allowed: false, origin };
-  }
-
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Vary', 'Origin');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Access-Control-Max-Age', '300');
-  return { allowed: true, origin };
-}
-
-function jsonFailure(
-  res: VercelResponse,
-  status: number,
-  errorCode: ErrorCode,
-  message: string,
-): void {
-  const body: HealthFailure = {
-    ok: false,
-    errorCode,
-    message,
-    checkedAt: new Date().toISOString(),
-  };
-  res.status(status).json(body);
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   try {
     const { allowed } = applyCors(req, res);
@@ -133,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         res.status(403).end();
         return;
       }
-      jsonFailure(res, 403, 'CORS_FORBIDDEN', 'Origin is not allowed');
+      jsonFailure(res, 403, 'CORS_FORBIDDEN' satisfies ErrorCode, 'Origin is not allowed');
       return;
     }
 
@@ -143,20 +79,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     if (req.method !== 'GET') {
-      jsonFailure(res, 405, 'METHOD_NOT_ALLOWED', 'Only GET is allowed');
+      jsonFailure(res, 405, 'METHOD_NOT_ALLOWED' satisfies ErrorCode, 'Only GET is allowed');
+      return;
+    }
+
+    const dataset = process.env.BQ_DATASET ?? DEFAULT_DATASET;
+
+    // BQ_MOCK_MODE=true のときは GCP に接続しない。デモ用の固定 response を返す。
+    // mode:"mock" と message を必ず含め、UI / docs 上で「実接続」と誤認されないようにする。
+    if (isMockMode()) {
+      const body: HealthSuccess = {
+        ok: true,
+        mode: 'mock',
+        projectId: MOCK_PROJECT_ID,
+        dataset,
+        location: MOCK_LOCATION,
+        datasetExists: true,
+        checkedAt: new Date().toISOString(),
+        latencyMs: 0,
+        message: MOCK_MESSAGE,
+      };
+      res.status(200).json(body);
       return;
     }
 
     const projectId = process.env.GCP_PROJECT_ID;
     const credsB64 = process.env.GCP_SERVICE_ACCOUNT_JSON_BASE64;
-    const dataset = process.env.BQ_DATASET ?? 'ec_growth_demo';
     const location = process.env.BQ_LOCATION ?? 'asia-northeast1';
 
     if (!projectId || !credsB64) {
       jsonFailure(
         res,
         200,
-        'CONFIG_MISSING',
+        'CONFIG_MISSING' satisfies ErrorCode,
         'Server is missing required env vars (GCP_PROJECT_ID / GCP_SERVICE_ACCOUNT_JSON_BASE64).',
       );
       return;
@@ -176,7 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       jsonFailure(
         res,
         200,
-        'CREDENTIALS_INVALID',
+        'CREDENTIALS_INVALID' satisfies ErrorCode,
         'GCP_SERVICE_ACCOUNT_JSON_BASE64 is not a valid base64-encoded service account JSON',
       );
       return;
@@ -206,7 +161,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         if (isNotFoundError(err)) {
           datasetExists = false;
         } else {
-          jsonFailure(res, 200, 'DATASET_CHECK_FAILED', safeMessage(err));
+          jsonFailure(res, 200, 'DATASET_CHECK_FAILED' satisfies ErrorCode, safeMessage(err));
           return;
         }
       }
@@ -214,6 +169,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       const latencyMs = Date.now() - startedAt;
       const body: HealthSuccess = {
         ok: true,
+        mode: 'live',
         projectId: maskProjectId(projectId),
         dataset,
         location,
@@ -223,9 +179,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       };
       res.status(200).json(body);
     } catch (err) {
-      jsonFailure(res, 200, 'BQ_QUERY_FAILED', safeMessage(err));
+      jsonFailure(res, 200, 'BQ_QUERY_FAILED' satisfies ErrorCode, safeMessage(err));
     }
   } catch (err) {
-    jsonFailure(res, 200, 'UNKNOWN', safeMessage(err));
+    jsonFailure(res, 200, 'UNKNOWN' satisfies ErrorCode, safeMessage(err));
   }
 }

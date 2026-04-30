@@ -8,10 +8,18 @@
 > CSV-first / API-later の世界観、既存の `ImportContext` / `localStorage` / `sample.ts`
 > フローを **絶対に壊さない** ことが前提。
 >
-> **進捗 (2026-04-30):** Phase 3A 第 1 PR として
-> [`api/bq/health.ts`](../api/bq/health.ts) を実装し、BigQuery 接続の最小確認のみ
-> サーバー側で行えるようにした。Dashboard UI / `/api/bq/orders-daily` 等は本 PR では
-> 実装しない（後続 PR で対応）。
+> **進捗 (2026-04-30):** Phase 3A 第 1 PR で
+> [`api/bq/health.ts`](../api/bq/health.ts) を導入し、サーバー側から BigQuery への
+> 最小接続確認 (`SELECT 1` + dataset 存在チェック) のみを行えるようにした。
+>
+> **追記 (2026-04-30 第 2 PR):** 実 GCP 接続前の検証ステップとして、`BQ_MOCK_MODE=true`
+> の **BigQuery デモ Mode** を導入。GCP 設定なし・課金なし・サービスアカウントなしで、
+> [`api/bq/health.ts`](../api/bq/health.ts) と [`api/bq/orders-daily.ts`](../api/bq/orders-daily.ts) が
+> `mode:"mock"` の固定 response を返す。Dashboard 上部の「BigQueryデモ」トグル ON で
+> 売上 / 注文数 / AOV を mock summary に切り替え、データソース Pill が `BigQueryデモ`
+> （emerald 系）に変わる。**実データ連携ではない / GCP コンソール未操作 / dataset・SA・
+> Budget Alert は未設定**。上司デモ・社内動線確認専用。実顧客接続（パターンB）に
+> 進む判断は引き続き本シート §1 を再合意してから行う。
 
 ---
 

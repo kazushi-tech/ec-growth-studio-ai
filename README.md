@@ -59,21 +59,49 @@ Node 18 以上推奨（開発は Node 24 で確認）。
 
 ## サーバー側 環境変数（Phase 3A 着手中）
 
-Phase 3A 第1PR で `/api/bq/health`（Vercel Functions）を追加した。
-実値は **必ず Vercel Env (Sensitive)** に設定し、リポジトリにはコミットしない。
+Phase 3A は `/api/bq/health` と `/api/bq/orders-daily` の 2 本を Vercel Functions として追加している。
+ただし **実 GCP 接続はまだ稼働させていない**（GCP プロジェクト / dataset / サービスアカウント / 課金 / Budget Alert は未設定）。
+上司デモ・動線確認は `BQ_MOCK_MODE=true` の **BigQuery デモ Mode** だけで完結する設計。
+
+実値（GCP 連携用）は **必ず Vercel Env (Sensitive)** に設定し、リポジトリにはコミットしない。
 キー一覧は [`.env.example`](.env.example) を参照。
 
 | Key | 用途 |
 | --- | --- |
-| `GCP_PROJECT_ID` | 接続先 GCP プロジェクトID |
+| `BQ_MOCK_MODE` | `true` で `/api/bq/*` を mock response 化（GCP に接続しない） |
+| `GCP_PROJECT_ID` | 接続先 GCP プロジェクトID（実接続時のみ） |
 | `GCP_SERVICE_ACCOUNT_JSON_BASE64` | サービスアカウント JSON を base64 化したもの（**Sensitive**） |
 | `BQ_DATASET` | 参照する dataset 名（デフォルト `ec_growth_demo`） |
 | `BQ_LOCATION` | dataset ロケーション（デフォルト `asia-northeast1`） |
 | `ALLOWED_ORIGINS` | CORS で許可する Origin（カンマ区切り） |
-| `MAX_QUERY_DAYS` | 1 リクエストあたりの最大期間（後続 PR で利用） |
+| `MAX_QUERY_DAYS` | 1 リクエストあたりの最大期間（orders-daily の from/to に適用） |
 
 > サービスアカウント JSON 本体・private_key・client_email を `.env.local` 含め
 > どこにも平文で残さない。Base64 化した値のみを Vercel Env に登録すること。
+
+### BigQuery デモ Mode の使い方
+
+GCP 設定なし・課金なし・サービスアカウントなしで Phase 3A の画面動線を確認するための **デモデータ表示モード**。
+**実データ連携ではない**ので、UI / docs 上で「BigQuery 接続済み」と扱わないこと。
+
+```sh
+# Vercel Functions をローカル/Preview で動かす場合
+echo "BQ_MOCK_MODE=true" > .env.local
+```
+
+Dashboard 上部の「BigQueryデモ」トグルを ON にすると、`/api/bq/orders-daily` の
+mock summary が 売上 / 注文数 / AOV の KPI に流れ込み、データソース Pill が
+`BigQueryデモ` (緑系) に切り替わる。`mode:"mock"` がレスポンスに含まれ、
+UI 上には `GCP未接続` バッジと「実BigQuery接続ではありません」が併記される。
+
+挙動:
+
+- `BQ_MOCK_MODE=true`
+  - `/api/bq/health` → `ok:true / mode:"mock"`（GCP に接続しない）
+  - `/api/bq/orders-daily?from=...&to=...` → `ok:true / mode:"mock" / rows / summary`（mock 30 日分）
+- `BQ_MOCK_MODE` 未設定
+  - `/api/bq/health` → 認証情報があれば実接続、なければ `CONFIG_MISSING`
+  - `/api/bq/orders-daily` → `501 / NOT_IMPLEMENTED`（実 BQ クエリは未実装）
 
 ## ライセンス
 

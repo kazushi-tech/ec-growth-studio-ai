@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Sparkles,
@@ -13,6 +14,7 @@ import {
   Check,
   Database,
   Lightbulb,
+  AlertCircle,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import KpiCard from "../components/ui/KpiCard";
@@ -26,13 +28,74 @@ import Pill, {
 import { actions, kpis as sampleKpis, products } from "../data/sample";
 import { useImport } from "../lib/csv/ImportContext";
 import { buildKpisFromImport } from "../lib/csv/buildKpis";
+import {
+  BQ_DEMO_DEFAULT_FROM,
+  BQ_DEMO_DEFAULT_TO,
+  BqFetchError,
+  fetchBqOrdersDaily,
+} from "../lib/bq/client";
+import type { BqOrdersDailySuccess } from "../lib/bq/types";
+import { buildKpisFromBqDemo } from "../lib/bq/buildKpisFromBqDemo";
+
+type DataSource = "bq-demo" | "csv" | "sample";
 
 export default function Dashboard() {
   const { ordersImport, ga4Import, adsImport } = useImport();
   const top5 = actions.slice(0, 5);
-  const kpis = ordersImport
-    ? buildKpisFromImport(ordersImport.aggregation)
-    : sampleKpis;
+
+  const [bqDemoEnabled, setBqDemoEnabled] = useState(false);
+  const [bqDemoLoading, setBqDemoLoading] = useState(false);
+  const [bqDemoData, setBqDemoData] = useState<BqOrdersDailySuccess | null>(
+    null,
+  );
+  const [bqDemoError, setBqDemoError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!bqDemoEnabled) {
+      setBqDemoData(null);
+      setBqDemoError(null);
+      setBqDemoLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    setBqDemoLoading(true);
+    setBqDemoError(null);
+    fetchBqOrdersDaily({
+      from: BQ_DEMO_DEFAULT_FROM,
+      to: BQ_DEMO_DEFAULT_TO,
+      signal: controller.signal,
+    })
+      .then((data) => {
+        setBqDemoData(data);
+        setBqDemoLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return;
+        const message =
+          err instanceof BqFetchError
+            ? `${err.errorCode}: ${err.message}`
+            : err instanceof Error
+              ? err.message
+              : "BigQueryデモの取得に失敗しました";
+        setBqDemoError(message);
+        setBqDemoLoading(false);
+        setBqDemoData(null);
+      });
+    return () => controller.abort();
+  }, [bqDemoEnabled]);
+
+  const usingBqDemo = bqDemoEnabled && bqDemoData !== null;
+  const source: DataSource = usingBqDemo
+    ? "bq-demo"
+    : ordersImport
+      ? "csv"
+      : "sample";
+
+  const kpis = usingBqDemo
+    ? buildKpisFromBqDemo(bqDemoData.summary)
+    : ordersImport
+      ? buildKpisFromImport(ordersImport.aggregation)
+      : sampleKpis;
 
   return (
     <>
@@ -58,6 +121,32 @@ export default function Dashboard() {
       />
 
       <div className="space-y-5 px-6 py-5">
+        <DataSourceBar
+          source={source}
+          bqDemoEnabled={bqDemoEnabled}
+          bqDemoLoading={bqDemoLoading}
+          onToggleBqDemo={() => setBqDemoEnabled((v) => !v)}
+          bqDemoMeta={bqDemoData}
+        />
+
+        {bqDemoError && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-rose-200 bg-rose-50/70 px-4 py-2 text-[11px] text-rose-800">
+            <AlertCircle size={12} />
+            <span className="font-semibold">BigQueryデモの取得に失敗:</span>
+            <span className="font-mono">{bqDemoError}</span>
+            <span className="text-rose-700/70">
+              （CSV/サンプル値にフォールバック）
+            </span>
+            <button
+              type="button"
+              onClick={() => setBqDemoEnabled(false)}
+              className="ml-auto text-rose-700 hover:text-rose-900"
+            >
+              デモをOFFにする →
+            </button>
+          </div>
+        )}
+
         {ordersImport && (
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-2 text-[11px] text-emerald-800">
             <Database size={12} />
@@ -434,6 +523,77 @@ export default function Dashboard() {
         </SectionCard>
       </div>
     </>
+  );
+}
+
+function DataSourceBar({
+  source,
+  bqDemoEnabled,
+  bqDemoLoading,
+  onToggleBqDemo,
+  bqDemoMeta,
+}: {
+  source: DataSource;
+  bqDemoEnabled: boolean;
+  bqDemoLoading: boolean;
+  onToggleBqDemo: () => void;
+  bqDemoMeta: BqOrdersDailySuccess | null;
+}) {
+  const sourceLabel =
+    source === "bq-demo"
+      ? "BigQueryデモ"
+      : source === "csv"
+        ? "CSV取込"
+        : "サンプル";
+  const sourceTone =
+    source === "bq-demo" ? "mint" : source === "csv" ? "sky" : "slate";
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white/60 px-4 py-2.5 text-[11px] text-slate-600">
+      <div className="flex items-center gap-2">
+        <Database size={12} className="text-slate-500" />
+        <span className="font-semibold text-slate-700">データソース:</span>
+        <Pill tone={sourceTone} size="xs">
+          {sourceLabel}
+        </Pill>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={bqDemoEnabled}
+          aria-label="BigQueryデモを切り替え"
+          onClick={onToggleBqDemo}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+            bqDemoEnabled ? "bg-emerald-500" : "bg-slate-300"
+          }`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+              bqDemoEnabled ? "translate-x-4" : "translate-x-0.5"
+            }`}
+          />
+        </button>
+        <span className="font-medium text-slate-700">BigQueryデモ</span>
+        <span className="text-[10px] text-slate-400">
+          {bqDemoLoading
+            ? "取得中…"
+            : bqDemoEnabled
+              ? "ON（デモデータ表示中）"
+              : "OFF"}
+        </span>
+      </div>
+
+      <div className="ml-auto flex items-center gap-2 text-[10px] text-slate-400">
+        <span className="rounded-full bg-slate-100 px-2 py-0.5">GCP未接続</span>
+        <span>
+          {source === "bq-demo" && bqDemoMeta
+            ? `期間 ${bqDemoMeta.from}〜${bqDemoMeta.to} / ${bqDemoMeta.rows.length}日 / mode:mock`
+            : "実BigQuery接続ではありません"}
+        </span>
+      </div>
+    </div>
   );
 }
 
