@@ -5,8 +5,8 @@
  * Usage:
  *   npx tsx scripts/smoke-bq-health.ts
  *
- * 実 GCP に接続するケースは扱わない。CONFIG_MISSING / CORS / OPTIONS / method
- * 周りの分岐と、isNotFoundError の判定ロジックのみを検証する。
+ * 実 GCP に接続するケースは扱わない。CONFIG_MISSING / mock mode / CORS /
+ * OPTIONS / method 周りの分岐と、isNotFoundError の判定ロジックのみを検証する。
  */
 import handler, { isNotFoundError } from '../api/bq/health';
 
@@ -68,9 +68,19 @@ async function runHandler(
   origin: string | undefined,
   envOverrides: Record<string, string | undefined>,
 ) {
+  const isolatedKeys = [
+    'BQ_MOCK_MODE',
+    'GCP_PROJECT_ID',
+    'GCP_SERVICE_ACCOUNT_JSON_BASE64',
+    'BQ_DATASET',
+    'BQ_LOCATION',
+    'ALLOWED_ORIGINS',
+    'MAX_QUERY_DAYS',
+  ];
   const before: Record<string, string | undefined> = {};
-  for (const [k, v] of Object.entries(envOverrides)) {
+  for (const k of isolatedKeys) {
     before[k] = process.env[k];
+    const v = envOverrides[k];
     if (v === undefined) delete process.env[k];
     else process.env[k] = v;
   }
@@ -100,6 +110,7 @@ async function main() {
     GCP_PROJECT_ID: undefined,
     GCP_SERVICE_ACCOUNT_JSON_BASE64: undefined,
     ALLOWED_ORIGINS: undefined,
+    BQ_MOCK_MODE: undefined,
   });
   console.log(JSON.stringify({ case: 'GET no-creds', status: r1.statusCode, body: r1.body }));
   expect('GET no-creds → 200', r1.statusCode === 200);
@@ -109,6 +120,38 @@ async function main() {
       (r1.body as { errorCode?: string })?.errorCode === 'CONFIG_MISSING',
   );
   expect('GET no-creds → no secret leak', !leaksSecret(r1.body));
+
+  // ---------- BQ_MOCK_MODE=true: GCP 認証なしでも ok:true / mode:"mock" ----------
+  const rMock = await runHandler('GET', undefined, {
+    GCP_PROJECT_ID: undefined,
+    GCP_SERVICE_ACCOUNT_JSON_BASE64: undefined,
+    ALLOWED_ORIGINS: undefined,
+    BQ_MOCK_MODE: 'true',
+  });
+  console.log(JSON.stringify({ case: 'GET mock-mode', status: rMock.statusCode, body: rMock.body }));
+  expect('mock-mode → 200', rMock.statusCode === 200);
+  expect(
+    'mock-mode → ok:true',
+    (rMock.body as { ok?: boolean })?.ok === true,
+  );
+  expect(
+    'mock-mode → mode:"mock"',
+    (rMock.body as { mode?: string })?.mode === 'mock',
+  );
+  expect(
+    'mock-mode → projectId masked as "mock-project"',
+    (rMock.body as { projectId?: string })?.projectId === 'mock-project',
+  );
+  expect(
+    'mock-mode → location:"mock"',
+    (rMock.body as { location?: string })?.location === 'mock',
+  );
+  expect(
+    'mock-mode → message mentions demo/no-connection',
+    typeof (rMock.body as { message?: string })?.message === 'string' &&
+      ((rMock.body as { message?: string }).message ?? '').toLowerCase().includes('demo'),
+  );
+  expect('mock-mode → no secret leak', !leaksSecret(rMock.body));
 
   // ---------- POST 拒否（Origin なし = same-origin 扱いで通過 → 405） ----------
   const r2 = await runHandler('POST', undefined, { ALLOWED_ORIGINS: undefined });
