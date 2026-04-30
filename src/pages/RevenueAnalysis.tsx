@@ -641,7 +641,7 @@ export default function RevenueAnalysis() {
               <div className="mt-2 text-[11px] text-slate-500">
                 {base.prevMonth}{" "}
                 {adjusted && (
-                  <span className="ml-1 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                  <span className="ml-1 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-500">
                     推定
                   </span>
                 )}
@@ -654,13 +654,13 @@ export default function RevenueAnalysis() {
                 <div className="mt-1 text-[11px] text-slate-500">
                   {base.month}{" "}
                   {adjusted && (
-                    <span className="ml-1 inline-block rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700">
+                    <span className="ml-1 inline-block rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] text-emerald-700">
                       実値反映
                     </span>
                   )}
                 </div>
                 {ordersImport && (
-                  <div className="mt-1 text-[10px] text-slate-400">
+                  <div className="mt-1 text-[11px] text-slate-400">
                     注文CSV売上合計: {formatYenAbs(ordersImport.aggregation.totalSales)}
                   </div>
                 )}
@@ -1148,7 +1148,7 @@ function FactorCard({
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         <div className="rounded-md bg-slate-50/60 px-2.5 py-1.5">
-          <div className="text-[10px] text-slate-500">
+          <div className="text-[11px] text-slate-500">
             前月{dynamic ? "（推定）" : ""}
           </div>
           <div className="text-sm font-semibold text-slate-800">
@@ -1156,7 +1156,7 @@ function FactorCard({
           </div>
         </div>
         <div className="rounded-md bg-white px-2.5 py-1.5 ring-1 ring-slate-100">
-          <div className="text-[10px] text-slate-500">今月</div>
+          <div className="text-[11px] text-slate-500">今月</div>
           <div className="text-sm font-semibold text-slate-900">
             {factor.currValue}
           </div>
@@ -1287,7 +1287,7 @@ function RevenueBridge({
 function SmallStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-slate-100 bg-white p-3">
-      <div className="text-[10px] text-slate-500">{label}</div>
+      <div className="text-[11px] text-slate-500">{label}</div>
       <div className="mt-1 text-base font-semibold tracking-tight text-slate-900">
         {value}
       </div>
@@ -1315,7 +1315,7 @@ function BridgeRow({
       <div className="flex items-center gap-1.5 text-[12px] font-medium text-slate-700">
         {icon}
         {label}
-        {sub && <span className="text-[10px] font-normal text-slate-500">{sub}</span>}
+        {sub && <span className="text-[11px] font-normal text-slate-500">{sub}</span>}
       </div>
       <div>{bar}</div>
       <div className={`text-right text-[12px] font-semibold ${accent}`}>

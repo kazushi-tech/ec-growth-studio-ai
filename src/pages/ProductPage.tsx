@@ -200,7 +200,7 @@ export default function ProductPage() {
                 </div>
                 <ul className="mt-2 space-y-1.5 text-[11px] leading-6 text-slate-700">
                   <li className="rounded-lg bg-white px-2.5 py-2">
-                    <div className="text-[10px] text-slate-500">
+                    <div className="text-[11px] text-slate-500">
                       メインコピー (FV)
                     </div>
                     <div className="font-semibold text-slate-800">
@@ -208,21 +208,21 @@ export default function ProductPage() {
                     </div>
                   </li>
                   <li className="rounded-lg bg-white px-2.5 py-2">
-                    <div className="text-[10px] text-slate-500">サブコピー</div>
+                    <div className="text-[11px] text-slate-500">サブコピー</div>
                     有効成分と継続しやすい定期便で、毎日の頭皮ケアを習慣化
                   </li>
                   <li className="rounded-lg bg-white px-2.5 py-2">
-                    <div className="text-[10px] text-slate-500">
+                    <div className="text-[11px] text-slate-500">
                       推奨FV構成
                     </div>
                     商品画像 + 悩み訴求 + レビュー星 + 定期便CTA
                   </li>
                   <li className="rounded-lg bg-emerald-600 px-2.5 py-2 text-white">
-                    <div className="text-[10px] text-emerald-100">CTA文言</div>
+                    <div className="text-[11px] text-emerald-100">CTA文言</div>
                     まずは定期初回20%OFFで始める
                   </li>
                   <li className="rounded-lg bg-white px-2.5 py-2">
-                    <div className="text-[10px] text-slate-500">
+                    <div className="text-[11px] text-slate-500">
                       レビュー導線
                     </div>
                     FV直下にレビュー平均と使用者の声を配置
@@ -363,7 +363,7 @@ export default function ProductPage() {
                     <span>Sample Store</span>
                     <span>🛒</span>
                   </div>
-                  <div className="mt-3 rounded-md bg-slate-100 px-2 py-1 text-[10px] text-slate-500">
+                  <div className="mt-3 rounded-md bg-slate-100 px-2 py-1 text-[11px] text-slate-500">
                     抜け毛・薄毛が気になる方へ
                   </div>
                   <div className="mt-2 flex h-24 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-100 to-white text-3xl">
@@ -374,25 +374,25 @@ export default function ProductPage() {
                     <br />
                     30代からの薬用スカルプケア
                   </div>
-                  <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-600">
+                  <div className="mt-1 flex items-center gap-1 text-[11px] text-amber-600">
                     ★★★★☆ 4.6（1,248件のレビュー）
                   </div>
-                  <div className="mt-2 text-[10px] text-slate-500">
+                  <div className="mt-2 text-[11px] text-slate-500">
                     定期初回20%OFF / 送料無料 / いつでも解約OK
                   </div>
                   <button className="mt-2 w-full rounded-md bg-emerald-600 py-2 text-[11px] font-semibold text-white">
                     まずは定期初回20%OFFで始める
                   </button>
-                  <div className="mt-3 border-t border-slate-100 pt-2 text-[10px] font-semibold text-slate-700">
+                  <div className="mt-3 border-t border-slate-100 pt-2 text-[11px] font-semibold text-slate-700">
                     こんな悩みありませんか？
                   </div>
-                  <ul className="mt-1 space-y-0.5 text-[10px] text-slate-600">
+                  <ul className="mt-1 space-y-0.5 text-[11px] text-slate-600">
                     <li>・抜け毛が増えてきた</li>
                     <li>・髪のハリ・コシが気になる</li>
                     <li>・頭皮のべたつき・ニオイが気になる</li>
                   </ul>
                 </div>
-                <div className="mt-2 text-center text-[10px] text-slate-500">
+                <div className="mt-2 text-center text-[11px] text-slate-500">
                   広告: 抜け毛対策・頭皮ケアをはじめるなら今
                 </div>
               </div>

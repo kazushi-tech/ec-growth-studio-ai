@@ -32,11 +32,12 @@ export default function MobileNav({ open, onClose }: Props) {
       />
       <div className="absolute inset-y-0 left-0 flex w-64 max-w-[85vw] flex-col bg-navy-950 text-navy-100 shadow-cardLg">
         <button
+          type="button"
           onClick={onClose}
           aria-label="メニューを閉じる"
           className="absolute right-2 top-2 rounded-md p-1.5 text-navy-200 hover:bg-navy-800/60 hover:text-white"
         >
-          <X size={18} />
+          <X size={18} aria-hidden="true" />
         </button>
         <SidebarBody onNavigate={onClose} />
       </div>

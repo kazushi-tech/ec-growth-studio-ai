@@ -5,6 +5,12 @@ type Props = {
   width?: number;
   height?: number;
   className?: string;
+  /**
+   * a11y: スパークラインの意味をスクリーンリーダーに伝えるためのラベル。
+   * 指定された場合、SVG に `role="img"` + `aria-label` を付ける。
+   * 装飾用途のときは未指定のままにし、SVG を `aria-hidden="true"` で読み飛ばす。
+   */
+  ariaLabel?: string;
 };
 
 export default function Sparkline({
@@ -14,6 +20,7 @@ export default function Sparkline({
   width = 220,
   height = 56,
   className,
+  ariaLabel,
 }: Props) {
   if (!data.length) return null;
 
@@ -43,6 +50,9 @@ export default function Sparkline({
       preserveAspectRatio="none"
       width="100%"
       height={height}
+      role={ariaLabel ? "img" : undefined}
+      aria-label={ariaLabel}
+      aria-hidden={ariaLabel ? undefined : true}
     >
       <path d={areaPath} fill={fill} />
       <path

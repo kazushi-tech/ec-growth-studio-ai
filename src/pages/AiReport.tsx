@@ -109,12 +109,12 @@ export default function AiReport() {
             <div className="grid grid-cols-2 gap-3">
               {kpis.slice(0, 6).map((k) => (
                 <div key={k.key} className="rounded-lg border border-slate-100 p-2.5">
-                  <div className="text-[10px] text-slate-500">{k.label}</div>
+                  <div className="text-[11px] text-slate-500">{k.label}</div>
                   <div className="text-sm font-bold text-slate-900">
                     {k.value}
                   </div>
                   <div
-                    className={`text-[10px] font-semibold ${
+                    className={`text-[11px] font-semibold ${
                       k.intent === "negative"
                         ? "text-rose-600"
                         : k.intent === "positive"

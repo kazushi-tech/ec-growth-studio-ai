@@ -847,197 +847,469 @@ export const revenueAnalysis: RevenueAnalysis = {
   ],
 };
 
-// ガイド画面用データ。
-// 上司・社内関係者・クライアント候補の初見向けに、本プロトタイプの世界観と使い方を
-// 短時間で把握できるように 8 項目で整理する。
-// `imageSlot` は将来 GPT Image 2.0 で生成したインフォグラフィックを差し込む位置の予約名。
-// 画像生成プロンプトは docs/guide-infographic-plan.md 側で管理する。
-export type GuideTone = "navy" | "sky" | "mint" | "gold" | "violet" | "rose";
+// ガイド画面用データ (v2 = 説明サイト風)。
+// /app/guide は Hero + Reading path + sticky TOC + 5章 の説明サイト構成で再設計する。
+// 各章は HTML/SVG の live infographic で説明し、画像生成への依存を持たない。
+// 計画書: docs/guide-v2-plan.md / 旧プラン: docs/guide-infographic-plan.md
+export type GuideToneV2 = "navy" | "sky" | "mint" | "gold" | "violet" | "rose";
 
-export type GuideItem = {
-  id: string;
-  step: string;
+// Hero — ページ冒頭の枠
+export type GuideHeroV2 = {
+  eyebrow: string;
   title: string;
   lead: string;
-  imageSlot: string;
-  imageCaption: string;
-  bullets: string[];
-  callout?: { tone: GuideTone; label: string; body: string };
-  link?: { to: string; label: string };
-  tone: GuideTone;
+  bullets: { label: string; body: string }[];
+  caveat: { label: string; body: string };
 };
 
-export const guideItems: GuideItem[] = [
+// Reading path — 読者ペルソナごとの推奨ルート
+export type GuideReadingPathV2 = {
+  id: string;
+  audience: string;
+  estMin: string;
+  description: string;
+  route: { anchor: string; label: string }[];
+  tone: GuideToneV2;
+};
+
+// 各章のインフォグラフィック種別 (live HTML/SVG)
+export type LoopDiagramNodeV2 = {
+  label: string;
+  sublabel: string;
+  tone: GuideToneV2;
+};
+
+export type StepPipelineStepV2 = {
+  num: string;
+  title: string;
+  sub: string;
+  to?: string;
+  tone: GuideToneV2;
+};
+
+export type QuadrantCellV2 = {
+  label: string;
+  pillLabel: string;
+  body: string;
+  tone: GuideToneV2;
+};
+
+export type ScreenAnatomyV2 = {
+  id: string;
+  title: string;
+  to: string;
+  oneLiner: string;
+  blocks: { label: string; tone: GuideToneV2 }[];
+  reading: { phase: "Why" | "What" | "Action"; body: string }[];
+  hint?: string;
+};
+
+export type ExecTimelineSegmentV2 = {
+  from: number; // 経過分
+  to: number;
+  label: string;
+  say: string;
+  tone: GuideToneV2;
+};
+
+export type GuideAnatomyV2 =
+  | { kind: "loop-diagram"; nodes: LoopDiagramNodeV2[] }
+  | { kind: "step-pipeline"; steps: StepPipelineStepV2[] }
+  | { kind: "quadrant-legend"; cells: QuadrantCellV2[] }
+  | { kind: "screen-anatomy"; screens: ScreenAnatomyV2[] }
+  | { kind: "exec-timeline"; segments: ExecTimelineSegmentV2[] };
+
+// 章 (Chapter)
+export type GuideChapterV2 = {
+  id: string;
+  number: string;
+  title: string;
+  estMin: number;
+  intro: string;
+  bullets: string[];
+  tone: GuideToneV2;
+  anatomy: GuideAnatomyV2;
+  callout?: { tone: GuideToneV2; label: string; body: string };
+  links?: { to: string; label: string }[];
+};
+
+// Hero
+export const guideHeroV2: GuideHeroV2 = {
+  eyebrow: "EC Growth Studio AI — ガイド",
+  title: "月次EC改善BPaaS の使い方を5〜10分で理解する",
+  lead: "EC Growth Studio AI は「レポートで終わらせず、AI診断 → 人間レビュー → 実行管理 → 月次報告を1ループで回す」プロトタイプ。本ページは初見の上司・社内関係者・候補顧客・運用担当向けに、世界観と使い方を1ページで読める説明サイトとして用意している。",
+  bullets: [
+    {
+      label: "CSV-first / API-later",
+      body: "注文 / GA4 / 広告 CSV をブラウザに取込めば、その場で売上・CVR・ROAS が実値で動く。API なしで月次運用フローを開始できる。",
+    },
+    {
+      label: "AI診断 × 人間レビュー",
+      body: "AI が課題候補と改善機会を量で出し、最終判断と優先順位は担当者が決める。境界は施策ボード化のタイミング。",
+    },
+    {
+      label: "月次改善ループ",
+      body: "毎月同じ順序で同じ画面を回す。属人性を抑え、担当が変わっても継続できる運用にする。",
+    },
+  ],
+  caveat: {
+    label: "必ず最初に伝える前提",
+    body: "実 GCP / 実 BigQuery / 実 GA4 API / 実 広告 API / 実 AI API には未接続。CSV取込（実値）と BigQueryデモ Mode（Preview 限定の見え方再現）の2系統で運用フローを示す。",
+  },
+};
+
+// Reading path
+export const guideReadingPathsV2: GuideReadingPathV2[] = [
   {
-    id: "overview",
-    step: "01",
-    title: "全体像 — 月次EC改善BPaaSとは",
-    lead: "EC Growth Studio AI は、レポートで終わらせず「毎月の売上改善を1つの運用ループとして回す」ためのプロトタイプ。AI診断 → 人間レビュー → 実行管理 → 月次報告までを1画面構成で繋ぐ。",
-    imageSlot: "overview-loop",
-    imageCaption: "AI診断 × 人間レビュー × 施策実行 × 月次報告 の循環を1枚で示すインフォグラフィック予定地",
+    id: "exec",
+    audience: "上司 / 社内決裁者",
+    estMin: "5分",
+    description: "TL;DR → 全体像 → 上司デモの流れ の順で読むと最短で世界観が掴める。",
+    tone: "navy",
+    route: [
+      { anchor: "ch-overview", label: "01 全体像" },
+      { anchor: "ch-monthly-loop", label: "02 月次改善ループ" },
+      { anchor: "ch-exec-demo", label: "05 上司デモの流れ" },
+    ],
+  },
+  {
+    id: "client",
+    audience: "クライアント候補 (初見)",
+    estMin: "7〜10分",
+    description: "全体像 → 月次ループ → 月次レポートの使い方 を流すと提供価値が伝わりやすい。",
+    tone: "sky",
+    route: [
+      { anchor: "ch-overview", label: "01 全体像" },
+      { anchor: "ch-monthly-loop", label: "02 月次改善ループ" },
+      { anchor: "ch-screens", label: "04 画面別の使い方" },
+    ],
+  },
+  {
+    id: "operator",
+    audience: "社内オペレーター (運用担当)",
+    estMin: "10〜15分",
+    description: "月次ループ → データ取込 → 画面別の使い方 → 上司デモ の順で運用イメージを固める。",
+    tone: "mint",
+    route: [
+      { anchor: "ch-monthly-loop", label: "02 月次改善ループ" },
+      { anchor: "ch-data-import", label: "03 データ取込と未接続範囲" },
+      { anchor: "ch-screens", label: "04 画面別の使い方" },
+      { anchor: "ch-exec-demo", label: "05 上司デモの流れ" },
+    ],
+  },
+];
+
+// Chapters
+export const guideChaptersV2: GuideChapterV2[] = [
+  {
+    id: "ch-overview",
+    number: "01",
+    title: "全体像 — 月次EC改善BPaaS の世界観",
+    estMin: 2,
+    tone: "navy",
+    intro:
+      "EC Growth Studio AI は、レポートで終わらせず「毎月の売上改善を1つの運用ループとして回す」ためのプロトタイプ。AI診断 → 人間レビュー → 施策実行 → 月次報告 までを1画面構成で繋ぐ。",
     bullets: [
       "対象は月商 100万〜5,000万円規模の EC / D2C 事業者",
       "提供形態は SaaS UI ＋ BPaaS 伴走（人間レビュー・月次会議・効果検証）",
       "CSV-first / API-later — Shopify API なしでも CSV だけで月次改善を開始できる",
       "AI診断は出発点で、最終判断は担当者が行う運用設計",
     ],
+    anatomy: {
+      kind: "loop-diagram",
+      nodes: [
+        { label: "AI診断", sublabel: "課題と機会を量で出す", tone: "violet" },
+        { label: "人間レビュー", sublabel: "採用と優先順位を決める", tone: "sky" },
+        { label: "施策実行", sublabel: "担当・期限・進捗を管理", tone: "mint" },
+        { label: "月次報告", sublabel: "翌月会議の入口を作る", tone: "navy" },
+      ],
+    },
     callout: {
       tone: "navy",
       label: "現MVPで担保していること",
-      body: "実 GCP / 実 BigQuery / 実 GA4 API / 実 広告 API / 実 AI API には未接続。CSV取込（実値）と BigQueryデモ Mode（接続後の見え方の再現）の2系統で運用フローを示す。",
+      body: "実 GCP / 実 BigQuery / 実 GA4 API / 実 広告 API / 実 AI API には未接続。CSV取込（実値）と BigQueryデモ Mode（Preview 限定の見え方再現）の2系統で運用フローを示す。",
     },
-    link: { to: "/app", label: "ダッシュボードを開く" },
-    tone: "navy",
+    links: [{ to: "/app", label: "ダッシュボードを開く" }],
   },
   {
-    id: "monthly-loop",
-    step: "02",
+    id: "ch-monthly-loop",
+    number: "02",
     title: "月次改善ループ — 6ステップ",
-    lead: "「CSV/API取込 → AI診断 → 人間レビュー → 施策ボード → 効果検証 → 月次レポート」を毎月回す。各ステップが本プロダクトの画面に1対1で対応する。",
-    imageSlot: "monthly-loop",
-    imageCaption: "6ステップのリングと、各ステップの担当者・成果物を示すループ図の予定地",
+    estMin: 2,
+    tone: "sky",
+    intro:
+      "「CSV/API取込 → 売上要因分析 → AI考察 → 施策ボード → 効果検証 → 月次レポート」を毎月回す。各ステップが本プロダクトの画面に1対1で対応する。",
     bullets: [
       "Step 1 データ取込 — 注文 / GA4 / 広告 CSV を取込み実値で計算",
       "Step 2 売上要因分析 — 売上 = セッション × CVR × AOV に分解",
-      "Step 3 AI考察レポート — 売上課題・改善機会・リスクを4領域で整理",
+      "Step 3 AI考察レポート — 商品 / 流入 / CRM / 在庫 の4領域で課題を整理",
       "Step 4 施策ボード — 担当 / 期限 / 進捗 / 効果検証を管理",
-      "Step 5 効果検証 — 実行結果を翌月のKPIで突き合わせ",
-      "Step 6 月次レポート — 顧客提出用に整え次月会議へ繋ぐ",
+      "Step 5 効果検証 — 実装後の翌月KPIで突き合わせ",
+      "Step 6 月次レポート — 顧客提出用に整え、次月会議へ繋ぐ",
     ],
+    anatomy: {
+      kind: "step-pipeline",
+      steps: [
+        { num: "1", title: "データ取込", sub: "注文 / GA4 / 広告 CSV", to: "/app/data-import", tone: "navy" },
+        { num: "2", title: "売上要因分析", sub: "セッション×CVR×AOV", to: "/app/revenue-analysis", tone: "sky" },
+        { num: "3", title: "AI考察", sub: "4領域の課題と機会", to: "/app/ai-report", tone: "violet" },
+        { num: "4", title: "施策ボード", sub: "担当 / 期限 / 進捗", to: "/app/action-board", tone: "mint" },
+        { num: "5", title: "効果検証", sub: "実装後の翌月KPI", to: "/app/action-board", tone: "gold" },
+        { num: "6", title: "月次レポート", sub: "顧客提出用に整える", to: "/app/monthly-report", tone: "rose" },
+      ],
+    },
     callout: {
       tone: "sky",
       label: "ポイント",
       body: "毎月同じ順序で同じ画面を回すことで、属人性を抑え、担当が変わっても継続できる運用にする。",
     },
-    link: { to: "/app/action-board", label: "施策ボードを見る" },
-    tone: "sky",
+    links: [
+      { to: "/app/data-import", label: "データ取込を開く" },
+      { to: "/app/action-board", label: "施策ボードを開く" },
+    ],
   },
   {
-    id: "data-import",
-    step: "03",
+    id: "ch-data-import",
+    number: "03",
     title: "データ取込と未接続範囲",
-    lead: "本MVPは CSV取込（実値）で動かし、実 GCP / 実 API / 実 AI 生成には未接続。どの数字が実値で、どこが将来接続かを毎画面で明示する。",
-    imageSlot: "data-import-scope",
-    imageCaption: "実値（CSV）/ デモ（BigQuery mock）/ 未接続（実API・実AI）/ 将来予定 の4区分を示す凡例図の予定地",
+    estMin: 2,
+    tone: "gold",
+    intro:
+      "本MVPは CSV取込（実値）で動かし、実 GCP / 実 API / 実 AI 生成には未接続。どの数字が実値で、どこが将来接続かを毎画面で明示する。",
     bullets: [
       "実値: 注文CSV / GA4 CSV / 広告CSV をブラウザ内で集計（売上・注文・AOV・CVR・ROAS）",
-      "デモ: BigQuery デモ Mode は Preview 限定で `mode:\"mock\"` 応答を返す（実 GCP 接続ではない）",
+      "デモ: BigQuery デモ Mode は Preview 限定で mode:\"mock\" 応答を返す（実 GCP 接続ではない）",
       "未接続: GA4 Data API / Google広告 / Meta広告 / Shopify Admin API / 実 AI 生成",
       "将来予定: 実 BigQuery クエリ実行 / 認証 / 永続化 / マルチテナント",
     ],
-    callout: {
-      tone: "gold",
-      label: "上司・初見の方への前置き",
-      body: "「BigQuery / Shopify と本物で繋がっているのか」と勘違いされやすい。デモ前に必ず未接続範囲を明示してから本編に入る。",
+    anatomy: {
+      kind: "quadrant-legend",
+      cells: [
+        {
+          label: "実値",
+          pillLabel: "CSV取込",
+          body: "注文 / GA4 / 広告 CSV をブラウザで集計。売上・注文・AOV・CVR・ROAS まで実値で計算。",
+          tone: "mint",
+        },
+        {
+          label: "デモ",
+          pillLabel: "BigQuery mock (Preview)",
+          body: "Preview の `BQ_MOCK_MODE=true` でのみ mode:\"mock\" の固定応答を返す。実 GCP 接続ではない。Production は安全停止し CSV / サンプル値にフォールバック。",
+          tone: "sky",
+        },
+        {
+          label: "未接続",
+          pillLabel: "実 API / 実 AI",
+          body: "GA4 Data API / Google広告 / Meta広告 / Shopify Admin API / 実 AI 生成 はいずれも未接続。",
+          tone: "gold",
+        },
+        {
+          label: "将来予定",
+          pillLabel: "Phase 3 / 4",
+          body: "実 BigQuery クエリ実行 / 認証 / 永続化 / マルチテナントは後続フェーズで実装予定。",
+          tone: "violet",
+        },
+      ],
     },
-    link: { to: "/app/data-import", label: "データ取込画面を開く" },
-    tone: "gold",
-  },
-  {
-    id: "dashboard",
-    step: "04",
-    title: "Dashboard の見方",
-    lead: "ダッシュボードは「司令塔」。KPI / AI月次診断サマリー / 月次改善サイクル / 優先アクションTOP5 / 商品別判断 / データ連携状態 を1画面で俯瞰する。",
-    imageSlot: "dashboard-anatomy",
-    imageCaption: "Dashboard 上の各ブロック（KPI行・AIサマリー・施策TOP5・データ状態バー）を矢印で説明する分解図の予定地",
-    bullets: [
-      "上部のデータソースバーで「CSV取込 / BigQueryデモ / サンプル」を切替可能",
-      "KPI行は 売上 / 注文 / AOV / CVR / リピート / ROAS の6指標",
-      "AI月次診断サマリーは「売上機会・リスク・優先施策」の3カードで提示",
-      "優先アクションTOP5 と 商品別改善判断 でその月の意思決定材料が揃う",
-    ],
-    callout: {
-      tone: "sky",
-      label: "Why → What → Action の流れ",
-      body: "なぜ重要か（AI考察）→ 現状（KPIと商品別判断）→ 次の一手（優先アクション）の順で読むと迷いが少ない。",
-    },
-    link: { to: "/app", label: "ダッシュボードを開く" },
-    tone: "navy",
-  },
-  {
-    id: "ai-report",
-    step: "05",
-    title: "AI考察レポートの扱い",
-    lead: "AI考察レポートは「商品 / 広告・流入 / CRM・リピート / 在庫・SKU」の4領域で課題と機会を分解する。現MVPの文言はサンプル固定で、Phase 4 で実 AI 生成に接続する予定。",
-    imageSlot: "ai-review-flow",
-    imageCaption: "AI診断 → 人間レビュー → 施策ボード化 の3段階フローと「最終判断は担当者」を強調する図の予定地",
-    bullets: [
-      "AI生成は出発点で、採用判断と優先順位は担当者が行う",
-      "各カードに「インパクト / 工数 / 優先度」が付き施策ボードへ送れる",
-      "現MVPは静的サンプル文言（数値はサンプル / 文言は固定）",
-      "Phase 4 で Anthropic SDK + prompt cache に接続予定",
-    ],
-    callout: {
-      tone: "violet",
-      label: "AIと人間の役割分担",
-      body: "AIは「気づきの量」を担保し、人間は「採用と優先順位」を担う。その境界が施策ボード化のタイミング。",
-    },
-    link: { to: "/app/ai-report", label: "AI考察レポートを開く" },
-    tone: "violet",
-  },
-  {
-    id: "action-board",
-    step: "06",
-    title: "施策ボードの使い方",
-    lead: "施策ボードは「未着手 / 進行中 / レビュー中 / 実装済み / 効果検証中 / 完了」のレーンで、担当・期限・進捗・効果検証まで1ヶ所で管理する。",
-    imageSlot: "action-board-lanes",
-    imageCaption: "カンバンレーンと、各カードに乗る情報（担当 / 期限 / インパクト / 効果検証メモ）の説明図の予定地",
-    bullets: [
-      "AI考察レポート / 売上要因分析 / 商品ページ改善 から施策を1クリックで送り込む",
-      "P1 / P2 の優先度・インパクト・工数で並べ替え可能",
-      "実装後は「効果検証中」レーンで翌月KPIと突き合わせる",
-      "完了レーンに残るカードがそのまま月次レポートの素材になる",
-    ],
-    callout: {
-      tone: "mint",
-      label: "運用のコツ",
-      body: "「実行されない施策は無いのと同じ」。ボード上で必ず担当・期限・期待値を埋めるルールにすると、月次会議で議論する材料が揃う。",
-    },
-    link: { to: "/app/action-board", label: "施策ボードを開く" },
-    tone: "mint",
-  },
-  {
-    id: "monthly-report",
-    step: "07",
-    title: "月次レポートの使い方",
-    lead: "月次レポートは Executive Summary / KPI推移 / AI考察 / 実行施策 / 効果検証 / 次月計画 を1枚にまとめる。顧客提出用 PDF や次月会議のたたき台になる。",
-    imageSlot: "monthly-report-anatomy",
-    imageCaption: "1ページレポートのレイアウトと、各ブロックがどの画面のデータから自動反映されるかを矢印で示す図の予定地",
-    bullets: [
-      "ダッシュボード / AI考察 / 施策ボード のデータが自動で章立てに反映",
-      "「数値確認 / レビュー / 反映 / リスク」のステータスで進捗を可視化",
-      "顧客提出だけでなく、次月会議のアジェンダとしても使える",
-      "AI生成テキストはサンプル固定（Phase 4 で実 AI 接続予定）",
-    ],
-    callout: {
-      tone: "sky",
-      label: "BPaaS としての価値",
-      body: "報告で終わらせず、月次レポートの最後を「次月の優先施策3件」で締めることで、翌月の運用ループの入口にする。",
-    },
-    link: { to: "/app/monthly-report", label: "月次レポートを開く" },
-    tone: "sky",
-  },
-  {
-    id: "exec-demo",
-    step: "08",
-    title: "上司デモの流れ（5〜10分）",
-    lead: "初見の上司・クライアント候補に、本プロトタイプの世界観を5〜10分で伝える推奨フロー。最初に未接続範囲を1分で明示してから本編に入る。",
-    imageSlot: "exec-demo-flow",
-    imageCaption: "デモ導入 → ダッシュボード → AI考察 → 施策ボード → 月次レポート の所要時間つきフロー図の予定地",
-    bullets: [
-      "0:00–1:00 前置き — 「実 GCP / 実 API / 実 AI には未接続」を必ず最初に言い切る",
-      "1:00–3:00 ダッシュボード — KPIとAI月次診断サマリーで世界観を伝える",
-      "3:00–5:00 AI考察レポート — 課題4領域への分解と人間レビューの境界",
-      "5:00–7:00 施策ボード — 実行管理と効果検証のレーンを見せる",
-      "7:00–9:00 月次レポート — 報告で終わらせない設計を強調",
-      "9:00–10:00 締め — Phase 3（実 BigQuery）/ Phase 4（実 AI）のロードマップ",
-    ],
     callout: {
       tone: "rose",
       label: "誤認文言の禁止",
-      body: "「BigQuery接続済み」「GCP連携完了」「実データ連携済み」のような誤認を招く言い方はデモでも資料でも使わない。常に「実値 / デモ / 未接続 / 将来予定」の4区分で話す。",
+      body: "BigQuery / GCP / 実データ などを使って実接続済みと誤認させる完了形の表現はデモでも資料でも使わない。常に「実値 / デモ / 未接続 / 将来予定」の4区分で話す。",
     },
-    link: { to: "/app/monthly-report", label: "月次レポートで締める" },
+    links: [{ to: "/app/data-import", label: "データ取込画面を開く" }],
+  },
+  {
+    id: "ch-screens",
+    number: "04",
+    title: "画面別の使い方",
+    estMin: 4,
+    tone: "violet",
+    intro:
+      "5つの画面が「Why → What → Action」の順序で繋がる。司令塔の Dashboard から要因分析・AI考察・施策ボード・月次レポートへ降りていく。",
+    bullets: [
+      "Dashboard は司令塔。KPIと優先アクション・データ連携状態を1画面で俯瞰する",
+      "売上要因分析は 売上 = セッション × CVR × AOV の分解で「次に直す場所」を決める",
+      "AI考察は商品 / 流入 / CRM / 在庫 の4領域で課題と機会を提示する出発点",
+      "施策ボードは担当 / 期限 / 進捗 / 効果検証を1ヶ所で管理する実行レイヤ",
+      "月次レポートは Executive Summary / KPI推移 / AI考察 / 実行 / 効果検証 / 次月計画 を1枚で整える",
+    ],
+    anatomy: {
+      kind: "screen-anatomy",
+      screens: [
+        {
+          id: "screen-dashboard",
+          title: "Dashboard (司令塔)",
+          to: "/app",
+          oneLiner: "KPI / AI月次診断サマリー / 月次改善サイクル / 優先アクションTOP5 を俯瞰する。",
+          blocks: [
+            { label: "データソースバー", tone: "sky" },
+            { label: "KPI 6指標", tone: "navy" },
+            { label: "AI月次診断サマリー", tone: "violet" },
+            { label: "月次改善サイクル", tone: "mint" },
+            { label: "優先アクションTOP5", tone: "gold" },
+          ],
+          reading: [
+            { phase: "Why", body: "AI考察と KPI で重要度の根拠を確認する" },
+            { phase: "What", body: "KPI / 商品別判断で現状をつかむ" },
+            { phase: "Action", body: "優先アクションTOP5 から次の一手を決める" },
+          ],
+        },
+        {
+          id: "screen-revenue",
+          title: "売上要因分析",
+          to: "/app/revenue-analysis",
+          oneLiner: "売上 = セッション × CVR × AOV に分解し、主因候補を特定する。",
+          blocks: [
+            { label: "Hero サマリー", tone: "navy" },
+            { label: "要因カード3列", tone: "sky" },
+            { label: "売上ブリッジ", tone: "mint" },
+            { label: "GA4 チャネル別", tone: "violet" },
+            { label: "効率悪化キャンペーン", tone: "rose" },
+          ],
+          reading: [
+            { phase: "Why", body: "前月差をどの因子が動かしたか見る" },
+            { phase: "What", body: "因子カードで影響額を比較する" },
+            { phase: "Action", body: "推奨アクションを施策ボード or AI考察へ送る" },
+          ],
+        },
+        {
+          id: "screen-ai-report",
+          title: "AI考察レポート",
+          to: "/app/ai-report",
+          oneLiner: "商品 / 流入 / CRM / 在庫 の4領域で課題と機会を分解する出発点。",
+          blocks: [
+            { label: "領域フィルタ", tone: "navy" },
+            { label: "商品 / 流入 / CRM / 在庫", tone: "violet" },
+            { label: "インパクト × 工数 × 優先度", tone: "gold" },
+            { label: "施策ボードへ送る", tone: "mint" },
+          ],
+          reading: [
+            { phase: "Why", body: "AIは気づきの量を担保し、人間が採用を決める" },
+            { phase: "What", body: "各カードのインパクト / 工数 / 優先度を読む" },
+            { phase: "Action", body: "採用するものを施策ボードに送る" },
+          ],
+          hint: "現MVPは静的サンプル文言。Phase 4 で Anthropic SDK + prompt cache に接続予定。",
+        },
+        {
+          id: "screen-action-board",
+          title: "施策ボード",
+          to: "/app/action-board",
+          oneLiner: "担当 / 期限 / 進捗 / 効果検証 を1ヶ所で管理する実行レイヤ。",
+          blocks: [
+            { label: "サマリー6タイル", tone: "navy" },
+            { label: "担当別ロード", tone: "sky" },
+            { label: "カンバン6レーン", tone: "mint" },
+            { label: "効果検証", tone: "violet" },
+            { label: "レビューコメント", tone: "gold" },
+          ],
+          reading: [
+            { phase: "Why", body: "実行されない施策は無いのと同じ" },
+            { phase: "What", body: "レーン位置とインパクト / 工数を確認する" },
+            { phase: "Action", body: "担当・期限・期待値を必ず埋めて回す" },
+          ],
+        },
+        {
+          id: "screen-monthly-report",
+          title: "月次レポート",
+          to: "/app/monthly-report",
+          oneLiner: "Executive Summary / KPI / AI考察 / 実行 / 効果検証 / 次月計画 を1枚で整える。",
+          blocks: [
+            { label: "Cover (KPI Snapshot)", tone: "navy" },
+            { label: "Issues / 効果検証", tone: "rose" },
+            { label: "Next Month 期待効果", tone: "mint" },
+            { label: "Data Sources スコア", tone: "sky" },
+            { label: "編集ステータス", tone: "violet" },
+          ],
+          reading: [
+            { phase: "Why", body: "報告で終わらせず、翌月会議の入口にする" },
+            { phase: "What", body: "各章は他画面のデータから自動反映される" },
+            { phase: "Action", body: "末尾を「次月の優先施策3件」で締める" },
+          ],
+        },
+      ],
+    },
+    callout: {
+      tone: "violet",
+      label: "Why → What → Action の流れ",
+      body: "なぜ重要か（AI考察）→ 現状（KPI / 因子）→ 次の一手（施策） の順で読むと、画面が変わっても判断の流れが揃う。",
+    },
+    links: [
+      { to: "/app", label: "ダッシュボード" },
+      { to: "/app/revenue-analysis", label: "売上要因分析" },
+      { to: "/app/ai-report", label: "AI考察レポート" },
+      { to: "/app/action-board", label: "施策ボード" },
+      { to: "/app/monthly-report", label: "月次レポート" },
+    ],
+  },
+  {
+    id: "ch-exec-demo",
+    number: "05",
+    title: "上司デモの流れ（5〜10分）",
+    estMin: 2,
     tone: "rose",
+    intro:
+      "初見の上司・クライアント候補に、本プロトタイプの世界観を5〜10分で伝える推奨フロー。最初の1分で必ず「未接続範囲」を言い切ってから本編に入る。",
+    bullets: [
+      "0:00–1:00 前置き — 「実 GCP / 実 API / 実 AI には未接続」を最初に言い切る",
+      "1:00–3:00 ダッシュボード — KPIとAI月次診断サマリーで世界観を伝える",
+      "3:00–5:00 AI考察レポート — 4領域への分解と人間レビューの境界を示す",
+      "5:00–7:00 施策ボード — 実行管理と効果検証のレーンを見せる",
+      "7:00–9:00 月次レポート — 報告で終わらせない設計を強調する",
+      "9:00–10:00 締め — Phase 3（実 BigQuery）/ Phase 4（実 AI）のロードマップ",
+    ],
+    anatomy: {
+      kind: "exec-timeline",
+      segments: [
+        {
+          from: 0,
+          to: 1,
+          label: "前置き",
+          say: "実 GCP / 実 API / 実 AI には未接続。CSV取込（実値）と BigQueryデモ Mode の2系統。",
+          tone: "navy",
+        },
+        {
+          from: 1,
+          to: 3,
+          label: "ダッシュボード",
+          say: "KPI 6指標 と AI月次診断サマリーで世界観を伝える。",
+          tone: "sky",
+        },
+        {
+          from: 3,
+          to: 5,
+          label: "AI考察",
+          say: "商品 / 流入 / CRM / 在庫 への分解と「最終判断は担当者」の境界を強調。",
+          tone: "violet",
+        },
+        {
+          from: 5,
+          to: 7,
+          label: "施策ボード",
+          say: "担当・期限・進捗・効果検証を1ヶ所で管理するレーンを見せる。",
+          tone: "mint",
+        },
+        {
+          from: 7,
+          to: 9,
+          label: "月次レポート",
+          say: "報告で終わらせず、末尾の「次月優先施策3件」で翌月へ繋ぐ設計。",
+          tone: "gold",
+        },
+        {
+          from: 9,
+          to: 10,
+          label: "締め",
+          say: "Phase 3（実 BigQuery）/ Phase 4（実 AI）のロードマップ。",
+          tone: "rose",
+        },
+      ],
+    },
+    callout: {
+      tone: "rose",
+      label: "誤認文言の禁止",
+      body: "実接続済みや本番運用と誤認させる完了形の表現（BigQuery / GCP / 実データ / 本番 / 連携 などの組み合わせ）をデモでも資料でも使わない。常に「実値 / デモ / 未接続 / 将来予定」の4区分で話す。",
+    },
+    links: [{ to: "/app/monthly-report", label: "月次レポートで締める" }],
   },
 ];
+

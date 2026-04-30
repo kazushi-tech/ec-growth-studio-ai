@@ -413,7 +413,7 @@ export default function Dashboard() {
                         }`}
                       >
                         {p.cvr}
-                        <span className="text-[10px]">{p.cvrDelta}</span>
+                        <span className="text-[11px]">{p.cvrDelta}</span>
                       </span>
                     </td>
                     <td className="text-slate-600">残 {p.stock}</td>
@@ -547,13 +547,13 @@ export default function Dashboard() {
                   <Pill tone={d.tone} size="xs">
                     {d.state}
                   </Pill>
-                  <span className="truncate text-[10px] text-slate-400" title={d.when}>
+                  <span className="truncate text-[11px] text-slate-400" title={d.when}>
                     {d.when}
                   </span>
                 </div>
                 {d.detail && (
                   <div
-                    className="mt-1 truncate font-mono text-[10px] text-slate-500"
+                    className="mt-1 truncate font-mono text-[11px] text-slate-500"
                     title={d.detail}
                   >
                     {d.detail}
@@ -638,15 +638,15 @@ function DataSourceBar({
           />
         </button>
         <span className="font-medium text-slate-700">BigQueryデモ</span>
-        <span className="text-[10px] text-slate-400">{toggleStatus}</span>
+        <span className="text-[11px] text-slate-400">{toggleStatus}</span>
         {bqDemoFailure?.kind === "unavailable" && (
-          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-100">
+          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-100">
             Preview専用
           </span>
         )}
       </div>
 
-      <div className="ml-auto flex items-center gap-2 text-[10px] text-slate-400">
+      <div className="ml-auto flex items-center gap-2 text-[11px] text-slate-400">
         <span className="rounded-full bg-slate-100 px-2 py-0.5">GCP未接続</span>
         <span>
           {source === "bq-demo" && bqDemoMeta
@@ -760,7 +760,7 @@ function DataStateSummary({
                 {it.state}
               </Pill>
             </div>
-            <p className="mt-1.5 text-[10px] leading-4 text-slate-500">
+            <p className="mt-1.5 text-[11px] leading-4 text-slate-500">
               {it.note}
             </p>
           </div>
@@ -806,7 +806,7 @@ function SummaryStat({
         {title}
       </div>
       <p className="mt-2 text-xs leading-6 text-slate-700">{body}</p>
-      <div className="mt-2 text-[10px] text-slate-500">{meta}</div>
+      <div className="mt-2 text-[11px] text-slate-500">{meta}</div>
     </div>
   );
 }

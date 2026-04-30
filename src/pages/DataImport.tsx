@@ -420,13 +420,13 @@ export default function DataImport() {
                 <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                   {Object.entries(lastFailure.parseResult.detectedColumns).map(
                     ([k, v]) => (
-                      <li key={k} className="font-mono text-[10px]">
+                      <li key={k} className="font-mono text-[11px]">
                         {k}: {v ?? <span className="text-rose-500">未検出</span>}
                       </li>
                     ),
                   )}
                 </ul>
-                <div className="mt-2 text-[10px] text-slate-500">
+                <div className="mt-2 text-[11px] text-slate-500">
                   受理した行数: {formatInt(lastFailure.parseResult.acceptedRows)} /{" "}
                   {formatInt(lastFailure.parseResult.totalRows)}
                 </div>
@@ -573,7 +573,7 @@ export default function DataImport() {
                   <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                     {Object.entries(ordersImport.parseResult.detectedColumns).map(
                       ([k, v]) => (
-                        <li key={k} className="font-mono text-[10px]">
+                        <li key={k} className="font-mono text-[11px]">
                           {k}: {v ?? <span className="text-rose-500">未検出</span>}
                         </li>
                       ),
@@ -629,13 +629,13 @@ export default function DataImport() {
                 <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                   {Object.entries(ga4Failure.parseResult.detectedColumns).map(
                     ([k, v]) => (
-                      <li key={k} className="font-mono text-[10px]">
+                      <li key={k} className="font-mono text-[11px]">
                         {k}: {v ?? <span className="text-rose-500">未検出</span>}
                       </li>
                     ),
                   )}
                 </ul>
-                <div className="mt-2 text-[10px] text-slate-500">
+                <div className="mt-2 text-[11px] text-slate-500">
                   受理した行数: {formatInt(ga4Failure.parseResult.acceptedRows)} /{" "}
                   {formatInt(ga4Failure.parseResult.totalRows)}
                 </div>
@@ -864,14 +864,14 @@ export default function DataImport() {
                   <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                     {Object.entries(ga4Import.parseResult.detectedColumns).map(
                       ([k, v]) => (
-                        <li key={k} className="font-mono text-[10px]">
+                        <li key={k} className="font-mono text-[11px]">
                           {k}:{" "}
                           {v ?? <span className="text-rose-500">未検出</span>}
                         </li>
                       ),
                     )}
                   </ul>
-                  <div className="mt-2 text-[10px] text-slate-500">
+                  <div className="mt-2 text-[11px] text-slate-500">
                     受理した行数: {formatInt(ga4Import.parseResult.acceptedRows)} /{" "}
                     {formatInt(ga4Import.parseResult.totalRows)}
                   </div>
@@ -930,13 +930,13 @@ export default function DataImport() {
                 <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                   {Object.entries(adsFailure.parseResult.detectedColumns).map(
                     ([k, v]) => (
-                      <li key={k} className="font-mono text-[10px]">
+                      <li key={k} className="font-mono text-[11px]">
                         {k}: {v ?? <span className="text-rose-500">未検出</span>}
                       </li>
                     ),
                   )}
                 </ul>
-                <div className="mt-2 text-[10px] text-slate-500">
+                <div className="mt-2 text-[11px] text-slate-500">
                   受理した行数: {formatInt(adsFailure.parseResult.acceptedRows)} /{" "}
                   {formatInt(adsFailure.parseResult.totalRows)}
                 </div>
@@ -1154,14 +1154,14 @@ export default function DataImport() {
                   <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                     {Object.entries(adsImport.parseResult.detectedColumns).map(
                       ([k, v]) => (
-                        <li key={k} className="font-mono text-[10px]">
+                        <li key={k} className="font-mono text-[11px]">
                           {k}:{" "}
                           {v ?? <span className="text-rose-500">未検出</span>}
                         </li>
                       ),
                     )}
                   </ul>
-                  <div className="mt-2 text-[10px] text-slate-500">
+                  <div className="mt-2 text-[11px] text-slate-500">
                     受理した行数: {formatInt(adsImport.parseResult.acceptedRows)} /{" "}
                     {formatInt(adsImport.parseResult.totalRows)}
                   </div>
@@ -1251,7 +1251,7 @@ export default function DataImport() {
                 })}
               </tbody>
             </table>
-            <p className="mt-2 px-3 pb-1 text-[10px] text-slate-400">
+            <p className="mt-2 px-3 pb-1 text-[11px] text-slate-400">
               ※ 状態の説明: 取込済み=データが最新、要確認=差分/不整合の可能性、未接続=データ未連携、任意=より高度な分析に有効
             </p>
           </SectionCard>
@@ -1458,22 +1458,22 @@ export default function DataImport() {
                 </div>
                 <ul className="mt-1.5 space-y-0.5">
                   <li>
-                    <span className="font-mono text-[10px]">order_id</span> — 注文番号（必須）
+                    <span className="font-mono text-[11px]">order_id</span> — 注文番号（必須）
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">order_date</span> — 注文日 / date / 注文日（YYYY-MM-DD）
+                    <span className="font-mono text-[11px]">order_date</span> — 注文日 / date / 注文日（YYYY-MM-DD）
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">customer_id</span> — 顧客ID（任意・リピート分析に使用）
+                    <span className="font-mono text-[11px]">customer_id</span> — 顧客ID（任意・リピート分析に使用）
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">product_name</span> — 商品名 / product / 商品名
+                    <span className="font-mono text-[11px]">product_name</span> — 商品名 / product / 商品名
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">quantity</span> — 数量 / qty
+                    <span className="font-mono text-[11px]">quantity</span> — 数量 / qty
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">total_sales</span> — total / sales / 売上（税込・¥可）
+                    <span className="font-mono text-[11px]">total_sales</span> — total / sales / 売上（税込・¥可）
                   </li>
                 </ul>
               </div>
@@ -1485,25 +1485,25 @@ export default function DataImport() {
                 </div>
                 <ul className="mt-1.5 space-y-0.5">
                   <li>
-                    <span className="font-mono text-[10px]">date</span> — 日付（必須） / event_date / 日付
+                    <span className="font-mono text-[11px]">date</span> — 日付（必須） / event_date / 日付
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">sessions</span> — セッション数（必須） / セッション
+                    <span className="font-mono text-[11px]">sessions</span> — セッション数（必須） / セッション
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">users</span> — ユーザー数（任意） / active_users
+                    <span className="font-mono text-[11px]">users</span> — ユーザー数（任意） / active_users
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">purchases</span> — 購入数（任意・CVRに使用） / transactions / 購入
+                    <span className="font-mono text-[11px]">purchases</span> — 購入数（任意・CVRに使用） / transactions / 購入
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">total_revenue</span> — GA4売上（任意） / revenue
+                    <span className="font-mono text-[11px]">total_revenue</span> — GA4売上（任意） / revenue
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">channel</span> — チャネル（任意） / session_default_channel_group / 流入元
+                    <span className="font-mono text-[11px]">channel</span> — チャネル（任意） / session_default_channel_group / 流入元
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">landing_page</span> — LP（任意） / page_path / ランディングページ
+                    <span className="font-mono text-[11px]">landing_page</span> — LP（任意） / page_path / ランディングページ
                   </li>
                 </ul>
               </div>
@@ -1515,31 +1515,31 @@ export default function DataImport() {
                 </div>
                 <ul className="mt-1.5 space-y-0.5">
                   <li>
-                    <span className="font-mono text-[10px]">campaign</span> — キャンペーン名（必須） / campaign_name / キャンペーン
+                    <span className="font-mono text-[11px]">campaign</span> — キャンペーン名（必須） / campaign_name / キャンペーン
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">channel</span> — 媒体（必須） / platform / media / 媒体名
+                    <span className="font-mono text-[11px]">channel</span> — 媒体（必須） / platform / media / 媒体名
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">date</span> — 配信日（必須） / day / 日付
+                    <span className="font-mono text-[11px]">date</span> — 配信日（必須） / day / 日付
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">cost</span> — 広告費（必須） / spend / 費用 / 消化金額
+                    <span className="font-mono text-[11px]">cost</span> — 広告費（必須） / spend / 費用 / 消化金額
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">impressions</span> — 表示回数（任意） / imp
+                    <span className="font-mono text-[11px]">impressions</span> — 表示回数（任意） / imp
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">clicks</span> — クリック数（任意） / click
+                    <span className="font-mono text-[11px]">clicks</span> — クリック数（任意） / click
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">conversions</span> — コンバージョン（任意） / conv / purchases
+                    <span className="font-mono text-[11px]">conversions</span> — コンバージョン（任意） / conv / purchases
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">revenue</span> — 広告経由売上（任意・ROAS算出に使用） / conversion_value
+                    <span className="font-mono text-[11px]">revenue</span> — 広告経由売上（任意・ROAS算出に使用） / conversion_value
                   </li>
                   <li>
-                    <span className="font-mono text-[10px]">product_name</span> — 紐付け商品（任意）
+                    <span className="font-mono text-[11px]">product_name</span> — 紐付け商品（任意）
                   </li>
                 </ul>
               </div>
@@ -1605,7 +1605,7 @@ export default function DataImport() {
                       <Pill tone={t as "mint" | "gold"} size="xs">
                         {s}
                       </Pill>
-                      <span className="text-[10px] text-slate-400">{d}</span>
+                      <span className="text-[11px] text-slate-400">{d}</span>
                     </span>
                   </li>
                 ))}
@@ -1645,7 +1645,7 @@ export default function DataImport() {
                   <div className="text-xs font-semibold text-slate-800">
                     {x.l}
                   </div>
-                  <div className="text-[10px] text-slate-500">{x.s}</div>
+                  <div className="text-[11px] text-slate-500">{x.s}</div>
                   <button
                     type="button"
                     disabled
@@ -1833,7 +1833,7 @@ function SummaryItem({
       <div className="mt-1 text-lg font-bold tracking-tight text-slate-900">
         {value}
       </div>
-      {sub && <div className="text-[10px] text-slate-400">{sub}</div>}
+      {sub && <div className="text-[11px] text-slate-400">{sub}</div>}
       {progress !== undefined && (
         <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-100">
           <div

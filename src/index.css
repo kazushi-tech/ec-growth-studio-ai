@@ -19,6 +19,31 @@
     @apply text-slate-900;
     letter-spacing: -0.01em;
   }
+
+  /* キーボード操作時の共通フォーカスリング。
+     ボタン/リンク/インプットを Tab 周回したとき、
+     ライト面では navy-500、暗背景 (Sidebar 等) では emerald-300 のリングが当たる想定。
+     `outline: none` には頼らず、focus-visible 時のみリングを描画する。 */
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible,
+  [role="button"]:focus-visible,
+  [role="switch"]:focus-visible,
+  [role="tab"]:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid theme("colors.navy.500");
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  /* Sidebar / モバイルナビ等の暗背景は emerald リングでコントラスト確保 */
+  .bg-navy-950 a:focus-visible,
+  .bg-navy-950 button:focus-visible,
+  .bg-navy-900 a:focus-visible,
+  .bg-navy-900 button:focus-visible {
+    outline-color: theme("colors.emerald.300");
+  }
 }
 
 @layer components {
@@ -95,6 +120,16 @@
   }
   .nav-item-active {
     @apply bg-white/10 text-white;
+  }
+
+  /* スクリーンリーダー専用テキスト。Topbar をスキップして main に飛ぶリンク等で使う。
+     フォーカス時のみ可視化する。 */
+  .sr-only-focusable {
+    @apply absolute -translate-y-full opacity-0;
+  }
+  .sr-only-focusable:focus,
+  .sr-only-focusable:focus-visible {
+    @apply translate-y-0 opacity-100;
   }
 }
 

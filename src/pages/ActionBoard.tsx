@@ -103,7 +103,7 @@ export default function ActionBoard() {
                 <div className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
                   {s.v}
                 </div>
-                <div className="mt-0.5 text-[10px] text-slate-500">{s.d}</div>
+                <div className="mt-0.5 text-[11px] text-slate-500">{s.d}</div>
               </div>
             ))}
             <div className="col-span-2 rounded-xl border border-slate-100 bg-white p-3 md:col-span-3 xl:col-span-1">
@@ -111,7 +111,7 @@ export default function ActionBoard() {
               <div className="text-2xl font-bold text-slate-900">
                 {monthlyStats.monthlyGoal.target}件
               </div>
-              <div className="mt-1 text-[10px] text-slate-500">
+              <div className="mt-1 text-[11px] text-slate-500">
                 進捗 {monthlyStats.monthlyGoal.current} /{" "}
                 {monthlyStats.monthlyGoal.target}件 ({monthlyStats.monthlyGoal.percent}%)
               </div>
@@ -161,7 +161,7 @@ export default function ActionBoard() {
                 );
               })}
             </div>
-            <p className="mt-2 text-[10px] text-slate-400">
+            <p className="mt-2 text-[11px] text-slate-400">
               ※ 月次BPaaS伴走では、担当者あたり 5件以下を目安に配分する想定。
             </p>
           </SectionCard>
@@ -186,7 +186,7 @@ export default function ActionBoard() {
                 </p>
               )}
             </div>
-            <p className="mt-2 text-[10px] text-slate-400">
+            <p className="mt-2 text-[11px] text-slate-400">
               ※ 月次定例（5/7）までに反映予定。指摘は AI考察 → 担当者レビュー × BPaaS PM コメントの3層で残す。
             </p>
           </SectionCard>
@@ -195,8 +195,14 @@ export default function ActionBoard() {
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 lg:max-w-md">
-            <Search size={14} />
+            <Search size={14} aria-hidden="true" />
+            <label htmlFor="action-board-search" className="sr-only">
+              施策を検索
+            </label>
             <input
+              id="action-board-search"
+              type="search"
+              aria-label="施策を検索"
               className="w-full bg-transparent outline-none placeholder:text-slate-400"
               placeholder="施策を検索"
             />
@@ -246,7 +252,7 @@ export default function ActionBoard() {
                     <span className={`h-2 w-2 rounded-full ${col.bar}`} />
                     {col.key}
                   </div>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200">
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">
                     {col.items.length}
                   </span>
                 </div>
@@ -292,7 +298,7 @@ export default function ActionBoard() {
                   >
                     {s.v}
                   </div>
-                  <div className="text-[10px] text-slate-500">{s.sub}</div>
+                  <div className="text-[11px] text-slate-500">{s.sub}</div>
                 </div>
               ))}
             </div>
@@ -452,7 +458,7 @@ function ActionCard({ action: a }: { action: Action }) {
             <MessageSquare size={11} />
             レビューコメント
             {a.reviewer && (
-              <span className="ml-auto text-[10px] font-normal text-amber-700/80">
+              <span className="ml-auto text-[11px] font-normal text-amber-700/80">
                 {a.reviewer}
                 {a.reviewedAt && ` ・ ${a.reviewedAt}`}
               </span>
@@ -501,7 +507,7 @@ function ReviewRow({ action: a }: { action: Action }) {
           {a.expected}
         </span>
         {a.reviewer && (
-          <span className="ml-auto text-[10px] text-slate-400">
+          <span className="ml-auto text-[11px] text-slate-400">
             {a.reviewer}
             {a.reviewedAt && ` ・ ${a.reviewedAt}`}
           </span>

@@ -53,10 +53,11 @@ export function SidebarBody({ onNavigate }: Props) {
       <NavLink
         to="/"
         onClick={onNavigate}
+        aria-label="EC Growth Studio AI のトップへ戻る"
         className="flex items-center gap-2.5 px-5 py-5"
       >
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-sky-500">
-          <TrendingUp size={18} className="text-navy-950" />
+          <TrendingUp size={18} className="text-navy-950" aria-hidden="true" />
         </div>
         <div className="leading-tight">
           <div className="text-[15px] font-semibold text-white">EC Growth</div>
@@ -64,7 +65,7 @@ export function SidebarBody({ onNavigate }: Props) {
         </div>
       </NavLink>
 
-      <nav className="flex-1 space-y-0.5 px-3 pt-2">
+      <nav aria-label="主要画面" className="flex-1 space-y-0.5 px-3 pt-2">
         {navItems.map(({ label, to, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -75,7 +76,7 @@ export function SidebarBody({ onNavigate }: Props) {
               `nav-item ${isActive ? "nav-item-active" : ""}`
             }
           >
-            <Icon size={17} />
+            <Icon size={17} aria-hidden="true" />
             <span>{label}</span>
           </NavLink>
         ))}
@@ -84,10 +85,10 @@ export function SidebarBody({ onNavigate }: Props) {
       <div className="space-y-3 border-t border-navy-800/80 p-4">
         <div className="rounded-lg border border-navy-700 bg-navy-900/60 p-3">
           <div className="flex items-center gap-2 text-xs font-medium text-amber-300">
-            <Crown size={14} />
+            <Crown size={14} aria-hidden="true" />
             プレミアムプラン
           </div>
-          <p className="mt-1 text-[11px] text-navy-200">
+          <p className="mt-1 text-[11px] text-navy-100">
             契約期間: 2026/12/31まで
           </p>
         </div>
@@ -97,7 +98,7 @@ export function SidebarBody({ onNavigate }: Props) {
           </div>
           <div className="leading-tight">
             <div className="text-sm text-white">Growth Team</div>
-            <div className="text-[11px] text-navy-300">オーナー</div>
+            <div className="text-[11px] text-navy-200">オーナー</div>
           </div>
         </div>
       </div>
