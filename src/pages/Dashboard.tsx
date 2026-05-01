@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Info,
   LayoutGrid,
+  TrendingUp,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import KpiCard from "../components/ui/KpiCard";
@@ -52,6 +53,9 @@ type BqDemoFailure =
 export default function Dashboard() {
   const { ordersImport, ga4Import, adsImport } = useImport();
   const top5 = actions.slice(0, 5);
+  const [activeWorkbench, setActiveWorkbench] = useState<
+    "actions" | "products" | "data" | "insights"
+  >("actions");
 
   const [bqDemoEnabled, setBqDemoEnabled] = useState(false);
   const [bqDemoLoading, setBqDemoLoading] = useState(false);
@@ -136,21 +140,13 @@ export default function Dashboard() {
         }
       />
 
-      <div className="space-y-5 px-6 py-5">
+      <div className="space-y-4 px-4 py-4 sm:px-6">
         <DataSourceBar
           source={source}
           bqDemoEnabled={bqDemoEnabled}
           bqDemoLoading={bqDemoLoading}
           onToggleBqDemo={() => setBqDemoEnabled((v) => !v)}
           bqDemoMeta={bqDemoData}
-          bqDemoFailure={bqDemoFailure}
-        />
-
-        <DataStateSummary
-          ordersImport={ordersImport}
-          ga4Import={ga4Import}
-          adsImport={adsImport}
-          bqDemoEnabled={bqDemoEnabled}
           bqDemoFailure={bqDemoFailure}
         />
 
@@ -212,374 +208,51 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* KPI row */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <DataStateSummary
+          ordersImport={ordersImport}
+          ga4Import={ga4Import}
+          adsImport={adsImport}
+          bqDemoEnabled={bqDemoEnabled}
+          bqDemoFailure={bqDemoFailure}
+        />
+
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
           {kpis.map((k) => (
             <KpiCard key={k.key} kpi={k} />
           ))}
         </div>
 
-        {/* AI Summary + Cycle row */}
-        <div className="grid gap-5 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <SectionCard
-              title="AI月次診断サマリー"
-              icon={<Sparkles size={16} />}
-              action={
-                <Pill tone="gold">
-                  <AlertCircle size={11} /> サンプル文言 / Phase 4で実AI接続
-                </Pill>
-              }
-            >
-              <p className="text-sm leading-7 text-slate-700">
-                売上は成長していますが、広告費増加に対して主力商品のCVRと在庫効率が追いついていません。
-                今月は<b>商品Aのページ改善</b>、<b>商品Bへの広告配分変更</b>、
-                <b>初回購入者CRMの強化</b>を優先します。
-              </p>
-
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <SummaryStat
-                  tone="mint"
-                  icon={<Lightbulb size={16} />}
-                  title="売上機会"
-                  body="商品Bは在庫十分・CVR安定。広告拡張で売上増が見込めます。"
-                  meta="インパクト: 高"
-                />
-                <SummaryStat
-                  tone="rose"
-                  icon={<AlertTriangle size={16} />}
-                  title="リスク"
-                  body="商品Aは売上構成比が高い一方、CVR低下と在庫残が発生。"
-                  meta="重要度: 高"
-                />
-                <SummaryStat
-                  tone="sky"
-                  icon={<Target size={16} />}
-                  title="優先施策"
-                  body="商品AのLP改善と広告配分見直しを今週中に実行。"
-                  meta="今週の優先度: 高"
-                />
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                <span>分析期間: 2026年4月</span>
-                <span className="text-slate-300">|</span>
-                <span>次回改善会議: 5月7日</span>
-              </div>
-            </SectionCard>
-          </div>
-
-          <SectionCard
-            title="月次改善サイクル"
-            icon={<RefreshCw size={16} />}
-            action={
-              <span className="text-[11px] text-slate-500">
-                次回会議: 5/7 10:00
-              </span>
-            }
-          >
-            <CycleProgress />
-            <div className="mt-3 space-y-2 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
-              <div className="flex items-center gap-2">
-                <Users size={12} /> 担当: EC Growth Studio Team
-              </div>
-              <div className="flex items-center gap-2">
-                <CalendarClock size={12} /> 今週の完了目標: 3件
-              </div>
-            </div>
-          </SectionCard>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)_300px]">
+          <MonthlyStatusCard source={source} />
+          <AiBriefCard />
+          <NextActionCard />
         </div>
 
-        {/* Priority map row */}
         <SectionCard
-          title="施策の優先度マップ"
+          title="月次改善ワークベンチ"
           icon={<LayoutGrid size={16} />}
-          action={
-            <span className="text-[11px] text-slate-500">
-              インパクト × 実行しやすさ で見る次の一手
-            </span>
-          }
+          bodyClassName="!p-0"
         >
-          <PriorityMap actions={actions} />
-        </SectionCard>
-
-        {/* TOP5 + Product judgment row */}
-        <div className="grid gap-5 lg:grid-cols-12">
-          <SectionCard
-            className="lg:col-span-5"
-            title="優先アクション TOP5"
-            icon={<ListChecks size={16} />}
-            action={
-              <Link
-                to="/app/action-board"
-                className="text-sky-600 hover:text-sky-700"
-              >
-                施策ボードで実行管理 →
-              </Link>
-            }
-            bodyClassName="!px-2 !py-2"
-          >
-            <table className="table-clean">
-              <thead>
-                <tr>
-                  <th className="!w-8">#</th>
-                  <th>アクション</th>
-                  <th>関連領域</th>
-                  <th className="!w-16">インパクト</th>
-                  <th>担当者</th>
-                  <th className="!w-12">期限</th>
-                  <th className="!w-20">進捗</th>
-                </tr>
-              </thead>
-              <tbody>
-                {top5.map((a) => (
-                  <tr key={a.id}>
-                    <td className="text-slate-400">{a.id}</td>
-                    <td className="font-medium text-slate-800">{a.title}</td>
-                    <td>
-                      <Pill tone="slate" size="xs">
-                        {a.area}
-                      </Pill>
-                    </td>
-                    <td>
-                      <Pill tone={impactTone(a.impact)} size="xs">
-                        {a.impact}
-                      </Pill>
-                    </td>
-                    <td className="text-slate-600">{a.owner}</td>
-                    <td className="text-slate-500">{a.due}</td>
-                    <td>
-                      <Pill tone={statusTone(a.status)} size="xs">
-                        {a.status}
-                      </Pill>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="mt-2 px-3 pb-1 pt-2 text-xs">
-              <Link
-                to="/app/action-board"
-                className="inline-flex items-center gap-1 font-medium text-navy-700 hover:text-navy-900"
-              >
-                → 施策ボードで実行管理
-              </Link>
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            className="lg:col-span-7"
-            title="商品別改善判断"
-            icon={<Boxes size={16} />}
-            action={
-              <Link
-                to="/app/product-page"
-                className="text-sky-600 hover:text-sky-700"
-              >
-                商品ページ改善 →
-              </Link>
-            }
-            bodyClassName="!px-2 !py-2"
-          >
-            <table className="table-clean">
-              <thead>
-                <tr>
-                  <th>商品</th>
-                  <th className="!w-20">判断</th>
-                  <th>売上</th>
-                  <th>CVR</th>
-                  <th>在庫</th>
-                  <th>広告費</th>
-                  <th>AI推奨</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-slate-200 to-slate-50 text-[11px] font-semibold text-slate-600">
-                          {p.id}
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-slate-800">
-                            {p.name}
-                          </div>
-                          <div className="text-[11px] text-slate-400">
-                            {p.category}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <Pill tone={judgmentTone(p.judgment)} size="xs">
-                        {p.judgment}
-                      </Pill>
-                    </td>
-                    <td className="font-medium text-slate-800">{p.sales}</td>
-                    <td>
-                      <span
-                        className={`flex items-center gap-1 ${
-                          p.cvrTrend === "up"
-                            ? "text-emerald-600"
-                            : p.cvrTrend === "down"
-                              ? "text-rose-600"
-                              : "text-slate-500"
-                        }`}
-                      >
-                        {p.cvr}
-                        <span className="text-[11px]">{p.cvrDelta}</span>
-                      </span>
-                    </td>
-                    <td className="text-slate-600">残 {p.stock}</td>
-                    <td className="text-slate-600">{p.ad}</td>
-                    <td className="text-slate-500">{p.recommendation}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </SectionCard>
-        </div>
-
-        {/* Bottom row: Insights / Data state / Next */}
-        <div className="grid gap-5 lg:grid-cols-3">
-          <SectionCard
-            title="最新インサイト"
-            icon={<Sparkles size={16} />}
-            className="lg:col-span-2"
-            action={
-              <Link
-                to="/app/ai-report"
-                className="text-sky-600 hover:text-sky-700"
-              >
-                すべてのAIインサイトを見る →
-              </Link>
-            }
-          >
-            <ul className="grid gap-2 md:grid-cols-2">
-              {(
-                [
-                  ["広告費は +¥620,000（前月比 +18%）", "bg-amber-500"],
-                  ["商品AのCVRが -0.6pt 低下", "bg-rose-500"],
-                  ["新規顧客数は +12% で推移", "bg-emerald-500"],
-                  ["在庫回転日数は +4日 悪化", "bg-rose-500"],
-                ] as const
-              ).map(([t, c]) => (
-                <li
-                  key={t}
-                  className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-sm"
-                >
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${c}`}
-                    aria-hidden
-                  />
-                  {t}
-                </li>
-              ))}
-            </ul>
-          </SectionCard>
-
-          <SectionCard
-            title="次に実行すべきこと"
-            icon={<Target size={16} />}
-          >
-            <div className="text-sm leading-7 text-slate-700">
-              商品Aの商品ページ改善を最優先で開始してください。
-            </div>
-            <Link
-              to="/app/product-page"
-              className="btn-primary mt-4 w-full justify-center text-sm"
-            >
-              改善タスクを開く
-              <ArrowRight size={14} />
-            </Link>
-            <Link
-              to="/app/ai-report"
-              className="mt-3 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
-            >
-              根拠を見る <ChevronRight size={12} />
-            </Link>
-          </SectionCard>
-        </div>
-
-        {/* Data linkage state */}
-        <SectionCard title="データ連携状態" icon={<Database size={16} />}>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {[
-              ordersImport
-                ? {
-                    name: "注文CSV",
-                    state: "取込済",
-                    when: `${ordersImport.importedAt.toLocaleString("ja-JP")} / ${ordersImport.parseResult.acceptedRows.toLocaleString("ja-JP")}件`,
-                    detail: ordersImport.fileName,
-                    tone: "mint" as const,
-                  }
-                : {
-                    name: "注文CSV",
-                    state: "未取込",
-                    when: "未取込",
-                    detail: undefined,
-                    tone: "gold" as const,
-                  },
-              ga4Import
-                ? {
-                    name: "GA4 CSV",
-                    state: "取込済",
-                    when: `${ga4Import.importedAt.toLocaleString("ja-JP")} / ${ga4Import.parseResult.acceptedRows.toLocaleString("ja-JP")}件`,
-                    detail: ga4Import.fileName,
-                    tone: "mint" as const,
-                  }
-                : {
-                    name: "GA4 CSV",
-                    state: "任意・未取込",
-                    when: "未取込",
-                    detail: undefined,
-                    tone: "gold" as const,
-                  },
-              adsImport
-                ? {
-                    name: "広告CSV",
-                    state: "取込済",
-                    when: `${adsImport.importedAt.toLocaleString("ja-JP")} / ${adsImport.parseResult.acceptedRows.toLocaleString("ja-JP")}件`,
-                    detail: adsImport.fileName,
-                    tone: "mint" as const,
-                  }
-                : {
-                    name: "広告CSV",
-                    state: "任意・未取込",
-                    when: "未取込",
-                    detail: undefined,
-                    tone: "gold" as const,
-                  },
-              { name: "Shopify Admin API", state: "Phase 4で対応", when: "未接続", detail: undefined, tone: "slate" as const },
-              { name: "BigQuery / GA4 API", state: "Phase 3で対応", when: "未接続", detail: undefined, tone: "slate" as const },
-            ].map((d) => (
-              <div key={d.name} className="rounded-xl border border-slate-100 p-3">
-                <div className="text-xs font-semibold text-slate-700">
-                  {d.name}
-                </div>
-                <div className="mt-1.5 flex items-center justify-between gap-2">
-                  <Pill tone={d.tone} size="xs">
-                    {d.state}
-                  </Pill>
-                  <span className="truncate text-[11px] text-slate-400" title={d.when}>
-                    {d.when}
-                  </span>
-                </div>
-                {d.detail && (
-                  <div
-                    className="mt-1 truncate font-mono text-[11px] text-slate-500"
-                    title={d.detail}
-                  >
-                    {d.detail}
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="border-b border-slate-100 px-4 py-3">
+            <WorkbenchTabs
+              active={activeWorkbench}
+              onChange={setActiveWorkbench}
+            />
           </div>
-          <p className="mt-3 text-[11px] text-emerald-700">
-            ✓ CSVだけで月次診断可能
-          </p>
+          {activeWorkbench === "actions" && (
+            <ActionsWorkbench top5={top5} />
+          )}
+          {activeWorkbench === "products" && <ProductsWorkbench />}
+          {activeWorkbench === "data" && (
+            <DataWorkbench
+              ordersImport={ordersImport}
+              ga4Import={ga4Import}
+              adsImport={adsImport}
+              bqDemoEnabled={bqDemoEnabled}
+              bqDemoFailure={bqDemoFailure}
+            />
+          )}
+          {activeWorkbench === "insights" && <InsightsWorkbench />}
         </SectionCard>
       </div>
     </>
@@ -626,7 +299,7 @@ function DataSourceBar({
           : "ON（デモデータ表示中）";
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white/60 px-4 py-2.5 text-[11px] text-slate-600">
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-600 shadow-card">
       <div className="flex items-center gap-2">
         <Database size={12} className="text-slate-500" />
         <span className="font-semibold text-slate-700">データソース:</span>
@@ -671,6 +344,426 @@ function DataSourceBar({
               : "実BigQuery接続ではありません"}
         </span>
       </div>
+    </div>
+  );
+}
+
+function MonthlyStatusCard({ source }: { source: DataSource }) {
+  const sourceLabel =
+    source === "bq-demo"
+      ? "BigQueryデモ"
+      : source === "csv"
+        ? "CSV実値"
+        : "サンプル";
+
+  return (
+    <SectionCard
+      title="今月の状態"
+      icon={<TrendingUp size={16} />}
+      action={
+        <Pill tone={source === "sample" ? "slate" : "mint"} size="xs">
+          {sourceLabel}
+        </Pill>
+      }
+    >
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatusTile
+          label="売上"
+          value="+8.4%"
+          note="成長中"
+          tone="mint"
+        />
+        <StatusTile
+          label="CVR"
+          value="-0.6pt"
+          note="主力商品で低下"
+          tone="rose"
+        />
+        <StatusTile
+          label="広告ROAS"
+          value="-12%"
+          note="配分見直し"
+          tone="gold"
+        />
+      </div>
+      <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50/70 p-3 text-xs leading-6 text-slate-700">
+        売上は伸びていますが、広告費増加に対してCVRと在庫効率が追いついていません。
+        今月は <b>商品AのCVR改善</b> と <b>商品Bへの広告配分</b> を優先します。
+      </div>
+    </SectionCard>
+  );
+}
+
+function StatusTile({
+  label,
+  value,
+  note,
+  tone,
+}: {
+  label: string;
+  value: string;
+  note: string;
+  tone: "mint" | "rose" | "gold";
+}) {
+  const cls =
+    tone === "mint"
+      ? "border-emerald-200 bg-emerald-50/60 text-emerald-800"
+      : tone === "rose"
+        ? "border-rose-200 bg-rose-50/60 text-rose-800"
+        : "border-amber-200 bg-amber-50/60 text-amber-800";
+
+  return (
+    <div className={`rounded-lg border p-3 ${cls}`}>
+      <div className="text-xs font-semibold">{label}</div>
+      <div className="mt-1 text-xl font-semibold tracking-tight">{value}</div>
+      <div className="text-[11px] text-slate-500">{note}</div>
+    </div>
+  );
+}
+
+function AiBriefCard() {
+  return (
+    <SectionCard
+      title="AI月次診断"
+      icon={<Sparkles size={16} />}
+      action={
+        <Pill tone="gold" size="xs">
+          サンプル文言
+        </Pill>
+      }
+    >
+      <div className="space-y-2">
+        <SummaryStat
+          tone="rose"
+          icon={<AlertTriangle size={15} />}
+          title="異常"
+          body="商品AのCVR低下と在庫残が売上効率を押し下げています。"
+          meta="重要度: 高"
+        />
+        <SummaryStat
+          tone="mint"
+          icon={<Lightbulb size={15} />}
+          title="機会"
+          body="商品Bは在庫十分・CVR安定。広告拡張余地があります。"
+          meta="インパクト: 高"
+        />
+        <SummaryStat
+          tone="sky"
+          icon={<Target size={15} />}
+          title="判断"
+          body="LP改善と広告配分見直しを同じ週で進めます。"
+          meta="送り先: 施策ボード"
+        />
+      </div>
+    </SectionCard>
+  );
+}
+
+function NextActionCard() {
+  return (
+    <SectionCard
+      title="次に実行"
+      icon={<Target size={16} />}
+      action={<span className="text-[11px] text-slate-500">今週</span>}
+    >
+      <div className="rounded-lg border border-navy-100 bg-navy-50/70 p-3">
+        <div className="text-sm font-semibold text-navy-900">
+          商品Aの商品ページ改善
+        </div>
+        <p className="mt-1 text-xs leading-5 text-slate-600">
+          FVコピーとCTAを見直し、CVR低下の主因候補を潰す。
+        </p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <Pill tone="rose" size="xs">P1</Pill>
+          <Pill tone="gold" size="xs">工数 中</Pill>
+          <Pill tone="sky" size="xs">期限 5/10</Pill>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-2">
+        <Link
+          to="/app/product-page"
+          className="btn-primary w-full justify-center px-3 py-2 text-sm"
+        >
+          改善タスクを開く
+          <ArrowRight size={14} aria-hidden="true" />
+        </Link>
+        <Link
+          to="/app/action-board"
+          className="btn-secondary w-full justify-center px-3 py-2 text-sm"
+        >
+          施策ボードで管理
+        </Link>
+      </div>
+    </SectionCard>
+  );
+}
+
+function WorkbenchTabs({
+  active,
+  onChange,
+}: {
+  active: "actions" | "products" | "data" | "insights";
+  onChange: (tab: "actions" | "products" | "data" | "insights") => void;
+}) {
+  const tabs = [
+    { id: "actions", label: "優先施策" },
+    { id: "products", label: "商品" },
+    { id: "data", label: "データ状態" },
+    { id: "insights", label: "インサイト" },
+  ] as const;
+
+  return (
+    <div role="tablist" aria-label="ワークベンチ切替" className="flex gap-1">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          role="tab"
+          aria-selected={active === tab.id}
+          onClick={() => onChange(tab.id)}
+          className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+            active === tab.id
+              ? "bg-navy-900 text-white"
+              : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ActionsWorkbench({ top5 }: { top5: typeof actions }) {
+  return (
+    <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <div className="min-w-0">
+        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <Pill tone="rose" size="xs">P1優先</Pill>
+          <Pill tone="sky" size="xs">今週対応</Pill>
+          <span>インパクト × 実行しやすさで並べ替え</span>
+        </div>
+        <PriorityMap actions={actions} />
+      </div>
+      <ActionTable top5={top5} />
+    </div>
+  );
+}
+
+function ActionTable({ top5 }: { top5: typeof actions }) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table className="table-clean min-w-[48rem]">
+        <thead>
+          <tr>
+            <th className="!w-8">#</th>
+            <th>アクション</th>
+            <th>領域</th>
+            <th>Impact</th>
+            <th>担当</th>
+            <th>期限</th>
+            <th>進捗</th>
+            <th className="!w-16">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {top5.map((a) => (
+            <tr key={a.id}>
+              <td className="font-mono text-slate-400">{a.id}</td>
+              <td className="font-medium text-slate-800">{a.title}</td>
+              <td><Pill tone="slate" size="xs">{a.area}</Pill></td>
+              <td><Pill tone={impactTone(a.impact)} size="xs">{a.impact}</Pill></td>
+              <td>{a.owner}</td>
+              <td>{a.due}</td>
+              <td><Pill tone={statusTone(a.status)} size="xs">{a.status}</Pill></td>
+              <td>
+                <Link to="/app/action-board" className="text-xs font-medium text-sky-700 hover:text-sky-900">
+                  開く
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ProductsWorkbench() {
+  return (
+    <div className="overflow-x-auto p-4">
+      <table className="table-clean min-w-[54rem] rounded-lg border border-slate-200 bg-white">
+        <thead>
+          <tr>
+            <th>商品</th>
+            <th>判断</th>
+            <th>売上</th>
+            <th>CVR</th>
+            <th>在庫</th>
+            <th>広告費</th>
+            <th>AI推奨</th>
+            <th className="!w-20">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map((p) => (
+            <tr key={p.id}>
+              <td>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-[11px] font-semibold text-slate-600">
+                    {p.id}
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-slate-800">{p.name}</div>
+                    <div className="text-[11px] text-slate-400">{p.category}</div>
+                  </div>
+                </div>
+              </td>
+              <td><Pill tone={judgmentTone(p.judgment)} size="xs">{p.judgment}</Pill></td>
+              <td className="font-medium text-slate-800">{p.sales}</td>
+              <td>
+                <span
+                  className={`flex items-center gap-1 ${
+                    p.cvrTrend === "up"
+                      ? "text-emerald-600"
+                      : p.cvrTrend === "down"
+                        ? "text-rose-600"
+                        : "text-slate-500"
+                  }`}
+                >
+                  {p.cvr}<span className="text-[11px]">{p.cvrDelta}</span>
+                </span>
+              </td>
+              <td>残 {p.stock}</td>
+              <td>{p.ad}</td>
+              <td>{p.recommendation}</td>
+              <td>
+                <Link to="/app/product-page" className="text-xs font-medium text-sky-700 hover:text-sky-900">
+                  改善へ
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function DataWorkbench({
+  ordersImport,
+  ga4Import,
+  adsImport,
+  bqDemoEnabled,
+  bqDemoFailure,
+}: {
+  ordersImport: { fileName: string; importedAt: Date; parseResult: { acceptedRows: number } } | null;
+  ga4Import: { fileName: string; importedAt: Date; parseResult: { acceptedRows: number } } | null;
+  adsImport: { fileName: string; importedAt: Date; parseResult: { acceptedRows: number } } | null;
+  bqDemoEnabled: boolean;
+  bqDemoFailure: BqDemoFailure | null;
+}) {
+  const rows = [
+    ordersImport
+      ? {
+          name: "注文CSV",
+          state: "取込済",
+          when: `${ordersImport.importedAt.toLocaleString("ja-JP")} / ${ordersImport.parseResult.acceptedRows.toLocaleString("ja-JP")}件`,
+          detail: ordersImport.fileName,
+          tone: "mint" as const,
+        }
+      : { name: "注文CSV", state: "未取込", when: "未取込", detail: "CSV取込で実値化", tone: "gold" as const },
+    ga4Import
+      ? {
+          name: "GA4 CSV",
+          state: "取込済",
+          when: `${ga4Import.importedAt.toLocaleString("ja-JP")} / ${ga4Import.parseResult.acceptedRows.toLocaleString("ja-JP")}件`,
+          detail: ga4Import.fileName,
+          tone: "mint" as const,
+        }
+      : { name: "GA4 CSV", state: "任意・未取込", when: "未取込", detail: "実API未接続", tone: "gold" as const },
+    adsImport
+      ? {
+          name: "広告CSV",
+          state: "取込済",
+          when: `${adsImport.importedAt.toLocaleString("ja-JP")} / ${adsImport.parseResult.acceptedRows.toLocaleString("ja-JP")}件`,
+          detail: adsImport.fileName,
+          tone: "mint" as const,
+        }
+      : { name: "広告CSV", state: "任意・未取込", when: "未取込", detail: "実API未接続", tone: "gold" as const },
+    {
+      name: "BigQueryデモ",
+      state: bqDemoEnabled
+        ? bqDemoFailure?.kind === "unavailable"
+          ? "安全停止"
+          : "ON"
+        : "Previewでデモ可",
+      when: bqDemoFailure?.kind === "unavailable" ? "Production安全停止" : "実GCP未接続",
+      detail: "BQ_MOCK_MODE=true の Preview 限定",
+      tone: bqDemoEnabled && !bqDemoFailure ? "sky" as const : "gold" as const,
+    },
+    { name: "実AI生成", state: "未接続", when: "Phase 4", detail: "現MVPはサンプル文言", tone: "slate" as const },
+  ];
+
+  return (
+    <div className="overflow-x-auto p-4">
+      <table className="table-clean min-w-[48rem] rounded-lg border border-slate-200 bg-white">
+        <thead>
+          <tr>
+            <th>データ</th>
+            <th>状態</th>
+            <th>更新</th>
+            <th>説明</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.name}>
+              <td className="font-medium text-slate-900">{row.name}</td>
+              <td><Pill tone={row.tone} size="xs">{row.state}</Pill></td>
+              <td className="text-slate-500">{row.when}</td>
+              <td className="text-slate-600">{row.detail}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-3 text-xs text-slate-500">
+        本MVPは実 GCP / 実 GA4 API / 実広告 API / 実AI API には未接続。CSV取込とPreview限定デモで運用フローを確認します。
+      </p>
+    </div>
+  );
+}
+
+function InsightsWorkbench() {
+  const insights = [
+    ["広告費は +¥620,000（前月比 +18%）", "gold"],
+    ["商品AのCVRが -0.6pt 低下", "rose"],
+    ["新規顧客数は +12% で推移", "mint"],
+    ["在庫回転日数は +4日 悪化", "rose"],
+  ] as const;
+
+  return (
+    <div className="grid gap-3 p-4 md:grid-cols-2">
+      {insights.map(([text, tone]) => (
+        <div key={text} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+          <div className="flex items-center gap-2 text-sm text-slate-700">
+            <span
+              aria-hidden="true"
+              className={`h-2 w-2 rounded-full ${
+                tone === "mint"
+                  ? "bg-emerald-500"
+                  : tone === "rose"
+                    ? "bg-rose-500"
+                    : "bg-amber-400"
+              }`}
+            />
+            {text}
+          </div>
+          <Link to="/app/ai-report" className="text-xs font-medium text-sky-700 hover:text-sky-900">
+            根拠
+          </Link>
+        </div>
+      ))}
     </div>
   );
 }
