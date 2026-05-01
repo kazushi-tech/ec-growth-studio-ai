@@ -75,7 +75,7 @@ export default function Guide() {
     <>
       <Topbar
         title="ガイド"
-        subtitle="GA4風の早見表で、月次EC改善BPaaSの触り方とデータ状態を確認"
+        subtitle="操作順・画面別・データ状態を、管理画面の早見表として確認"
         actions={
           <Link to="/app" className="btn-primary px-3 py-1.5 text-xs">
             ダッシュボードへ
@@ -87,7 +87,7 @@ export default function Guide() {
         <GuideCommandBar />
 
         <section className="card overflow-hidden">
-          <div className="border-b border-slate-100 bg-white px-4 py-3">
+          <div className="border-b border-slate-100 bg-white px-5 py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -101,7 +101,7 @@ export default function Guide() {
                     CSV-first
                   </Pill>
                 </div>
-                <h2 className="mt-2 text-base font-semibold tracking-tight text-slate-900 sm:text-lg">
+                <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
                   月次EC改善を迷わず回すための操作ガイド
                 </h2>
               </div>
@@ -132,7 +132,7 @@ export default function Guide() {
                 </div>
               </div>
 
-              <div className="p-4">
+              <div className="p-5">
                 {activeTab === "overview" && (
                   <OverviewPanel steps={guideFirstStepsV3} />
                 )}
@@ -165,7 +165,7 @@ function GuideCommandBar() {
   return (
     <section
       aria-label="ガイドの要点"
-      className="grid gap-2 md:grid-cols-4"
+      className="card grid divide-y divide-slate-100 overflow-hidden md:grid-cols-4 md:divide-x md:divide-y-0"
     >
       <CompactMetric
         icon={<Sparkles size={14} />}
@@ -214,23 +214,23 @@ function CompactMetric({
 }) {
   const toneClass =
     tone === "navy"
-      ? "border-navy-200 bg-white text-navy-900"
+      ? "text-navy-900"
       : tone === "sky"
-        ? "border-sky-200 bg-sky-50/60 text-sky-900"
+        ? "text-sky-900"
         : tone === "mint"
-          ? "border-emerald-200 bg-emerald-50/60 text-emerald-900"
-          : "border-amber-200 bg-amber-50/60 text-amber-900";
+          ? "text-emerald-900"
+          : "text-amber-900";
 
   return (
-    <div className={`rounded-lg border px-3 py-2.5 ${toneClass}`}>
-      <div className="flex items-center gap-1.5 text-xs font-semibold">
-        <span className="text-slate-500" aria-hidden="true">
+    <div className={`px-4 py-3 ${toneClass}`}>
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+        <span aria-hidden="true">
           {icon}
         </span>
         {label}
       </div>
-      <div className="mt-1 text-sm font-semibold tracking-tight">{value}</div>
-      <div className="mt-0.5 text-xs text-slate-500">{note}</div>
+      <div className="mt-1 text-base font-semibold tracking-tight">{value}</div>
+      <div className="mt-1 text-sm text-slate-600">{note}</div>
     </div>
   );
 }
@@ -246,7 +246,7 @@ function TabBar({
     <div
       role="tablist"
       aria-label="ガイドカテゴリ"
-      className="flex w-full max-w-full gap-1 overflow-x-auto border-b border-slate-100 bg-white px-3 py-2"
+      className="flex w-full max-w-full gap-2 overflow-x-auto border-b border-slate-100 bg-white px-4 py-3"
     >
       {guideTabs.map((tab) => {
         const active = activeTab === tab.id;
@@ -257,7 +257,7 @@ function TabBar({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(tab.id)}
-            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors ${
               active
                 ? "bg-navy-900 text-white"
                 : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -276,45 +276,53 @@ function OverviewPanel({ steps }: { steps: GuideStepV3[] }) {
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
       <div className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-3">
-          {steps.map((step) => (
-            <div
-              key={step.num}
-              className="rounded-lg border border-slate-200 bg-white p-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-navy-900 text-xs font-semibold text-white">
-                  {step.num}
-                </span>
-                <Link
-                  to={step.to}
-                  className="text-xs font-medium text-sky-700 hover:text-sky-900"
-                >
-                  {step.toLabel}
-                </Link>
-              </div>
-              <h3 className="mt-3 text-sm font-semibold text-slate-900">
-                {step.title}
-              </h3>
-              <p className="mt-1.5 text-xs leading-5 text-slate-600">
-                {step.body}
-              </p>
-            </div>
-          ))}
+        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <table className="table-clean min-w-[44rem]">
+            <thead>
+              <tr>
+                <th className="!w-16">順番</th>
+                <th className="!w-44">やること</th>
+                <th>見るポイント</th>
+                <th className="!w-32">移動</th>
+              </tr>
+            </thead>
+            <tbody>
+              {steps.map((step) => (
+                <tr key={step.num}>
+                  <td>
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-navy-900 text-xs font-semibold text-white">
+                      {step.num}
+                    </span>
+                  </td>
+                  <td className="font-semibold text-slate-900">{step.title}</td>
+                  <td className="text-sm leading-6 text-slate-600">{step.body}</td>
+                  <td>
+                    <Link
+                      to={step.to}
+                      className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      {step.toLabel}
+                      <ChevronRight size={12} aria-hidden="true" />
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         <div className="rounded-lg border border-slate-200 bg-white">
-          <div className="border-b border-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">
+          <div className="border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-800">
             月次改善ループ
           </div>
-          <div className="grid gap-2 p-3 sm:grid-cols-4">
+          <div className="grid gap-3 p-4 sm:grid-cols-4">
             {[
               ["AI診断", "候補を量で出す", "violet"],
               ["人間レビュー", "採用を決める", "mint"],
               ["施策実行", "担当・期限を持つ", "sky"],
               ["月次報告", "翌月会議へ繋ぐ", "navy"],
             ].map(([label, note, tone]) => (
-              <div key={label} className="rounded-md border border-slate-100 bg-slate-50/70 p-3">
+              <div key={label} className="min-h-[96px] rounded-md border border-slate-100 bg-slate-50/70 p-3">
                 <Pill
                   tone={
                     tone === "violet"
@@ -329,19 +337,19 @@ function OverviewPanel({ steps }: { steps: GuideStepV3[] }) {
                 >
                   {label}
                 </Pill>
-                <p className="mt-2 text-xs leading-5 text-slate-600">{note}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{note}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900">
+      <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+        <div className="flex items-center gap-1.5 text-sm font-semibold text-amber-900">
           <AlertTriangle size={14} aria-hidden="true" />
           最初に共有する前提
         </div>
-        <p className="mt-2 text-xs leading-6 text-amber-900">
+        <p className="mt-2 text-sm leading-7 text-amber-900">
           本MVPは実 GCP / 実 BigQuery / 実 GA4 API / 実広告API / 実AI API
           には未接続。CSV取込と Preview 限定デモで運用フローを確認する。
         </p>
@@ -419,13 +427,13 @@ function ScreensPanel({ rows }: { rows: GuideScreenRowV3[] }) {
         </table>
       </div>
 
-      <div className="grid gap-2 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         {rows.map((row) => (
           <details
             key={`${row.id}-detail`}
-            className="group rounded-lg border border-slate-200 bg-white p-3"
+            className="group rounded-lg border border-slate-200 bg-white p-4"
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-slate-800">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-base font-semibold text-slate-800">
               <span>{row.name} の補足</span>
               <ChevronRight
                 size={14}
@@ -433,7 +441,7 @@ function ScreensPanel({ rows }: { rows: GuideScreenRowV3[] }) {
                 aria-hidden="true"
               />
             </summary>
-            <p className="mt-2 text-xs leading-6 text-slate-600">{row.detail}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{row.detail}</p>
           </details>
         ))}
       </div>
@@ -444,16 +452,16 @@ function ScreensPanel({ rows }: { rows: GuideScreenRowV3[] }) {
 function DataPanel({ rows }: { rows: GuideDataScopeRowV3[] }) {
   return (
     <div className="space-y-3">
-      <div className="grid gap-2 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-4">
         {rows.map((row) => (
           <div
             key={row.category}
-            className="rounded-lg border border-slate-200 bg-white p-3"
+            className="min-h-[118px] rounded-lg border border-slate-200 bg-white p-4"
           >
             <Pill tone={dataTone[row.tone]} size="xs">
               {row.category}
             </Pill>
-            <p className="mt-2 text-xs leading-5 text-slate-600">
+            <p className="mt-2 text-sm leading-6 text-slate-600">
               {row.example}
             </p>
           </div>
@@ -483,8 +491,8 @@ function DataPanel({ rows }: { rows: GuideDataScopeRowV3[] }) {
           </tbody>
         </table>
       </div>
-      <details className="group rounded-lg border border-rose-200 bg-rose-50/50 p-3">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-rose-800">
+      <details className="group rounded-lg border border-rose-200 bg-rose-50/50 p-4">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-base font-semibold text-rose-800">
           <span>誤認を避ける表現ルール</span>
           <ChevronRight
             size={14}
@@ -492,7 +500,7 @@ function DataPanel({ rows }: { rows: GuideDataScopeRowV3[] }) {
             aria-hidden="true"
           />
         </summary>
-        <p className="mt-2 text-xs leading-6 text-slate-700">
+        <p className="mt-2 text-sm leading-7 text-slate-700">
           接続完了のように見える完了形の表現は使わない。常に「実値 / デモ /
           未接続 / 将来予定」の区分で説明する。
         </p>
@@ -503,13 +511,13 @@ function DataPanel({ rows }: { rows: GuideDataScopeRowV3[] }) {
 
 function FaqPanel({ faqs }: { faqs: GuideFaqV3[] }) {
   return (
-    <div className="grid min-w-0 gap-2 lg:grid-cols-2">
+    <div className="grid min-w-0 gap-3 lg:grid-cols-2">
       {faqs.map((faq, index) => (
         <details
           key={faq.q}
-          className="group min-w-0 rounded-lg border border-slate-200 bg-white p-3"
+          className="group min-w-0 rounded-lg border border-slate-200 bg-white p-4"
         >
-          <summary className="flex min-w-0 cursor-pointer list-none items-start justify-between gap-2 text-sm font-semibold text-slate-900">
+          <summary className="flex min-w-0 cursor-pointer list-none items-start justify-between gap-2 text-base font-semibold text-slate-900">
             <span className="flex min-w-0 items-start gap-2 break-words">
               <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-50 text-xs font-semibold text-rose-700 ring-1 ring-rose-100">
                 Q{index + 1}
@@ -522,7 +530,7 @@ function FaqPanel({ faqs }: { faqs: GuideFaqV3[] }) {
               aria-hidden="true"
             />
           </summary>
-          <p className="mt-2 break-words pl-8 text-xs leading-6 text-slate-600">
+          <p className="mt-3 break-words pl-8 text-sm leading-7 text-slate-600">
             {faq.a}
           </p>
         </details>

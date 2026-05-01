@@ -61,7 +61,7 @@ export default function KpiCard({ kpi }: { kpi: Kpi }) {
   const badge = statusBadge[kpi.intent];
 
   return (
-    <div className="card card-hover relative overflow-hidden p-4">
+    <div className="card card-hover relative min-h-[156px] overflow-hidden p-4">
       <span
         aria-hidden
         className={`absolute inset-y-0 left-0 w-1 ${stripeClass[kpi.intent]}`}
@@ -69,7 +69,7 @@ export default function KpiCard({ kpi }: { kpi: Kpi }) {
       <div className="flex items-center justify-between gap-2">
         <div className="kpi-label">{kpi.label}</div>
         <span
-          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${badge.className}`}
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${badge.className}`}
         >
           {badge.label}
         </span>
@@ -83,7 +83,7 @@ export default function KpiCard({ kpi }: { kpi: Kpi }) {
           {kpi.delta}
         </div>
       </div>
-      <div className="mt-1 text-[11px] text-slate-500">{kpi.deltaLabel}</div>
+      <div className="mt-1 text-xs text-slate-500">{kpi.deltaLabel}</div>
       <div className="-mx-1 mt-2 h-12">
         <Sparkline
           data={kpi.spark}

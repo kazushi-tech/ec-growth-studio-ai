@@ -224,21 +224,13 @@ export default function Dashboard() {
           </div>
         )}
 
-        <DataStateSummary
-          ordersImport={ordersImport}
-          ga4Import={ga4Import}
-          adsImport={adsImport}
-          bqDemoEnabled={bqDemoEnabled}
-          bqDemoFailure={bqDemoFailure}
-        />
-
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           {kpis.map((k) => (
             <KpiCard key={k.key} kpi={k} />
           ))}
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)_300px]">
+        <div className="grid items-stretch gap-4 xl:grid-cols-3">
           <MonthlyStatusCard source={source} />
           <AiBriefCard />
           <NextActionCard />
@@ -315,7 +307,7 @@ function DataSourceBar({
           : "ON（デモデータ表示中）";
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-600 shadow-card">
+    <div className="flex flex-wrap items-center gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-card">
       <div className="flex items-center gap-2">
         <Database size={12} className="text-slate-500" />
         <span className="font-semibold text-slate-700">データソース:</span>
@@ -342,15 +334,15 @@ function DataSourceBar({
           />
         </button>
         <span className="font-medium text-slate-700">BigQueryデモ</span>
-        <span className="text-[11px] text-slate-400">{toggleStatus}</span>
+        <span className="text-xs text-slate-500">{toggleStatus}</span>
         {bqDemoFailure?.kind === "unavailable" && (
-          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-100">
+          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-100">
             Preview専用
           </span>
         )}
       </div>
 
-      <div className="ml-auto flex items-center gap-2 text-[11px] text-slate-400">
+      <div className="ml-auto flex items-center gap-2 text-xs text-slate-500">
         <span className="rounded-full bg-slate-100 px-2 py-0.5">GCP未接続</span>
         <span>
           {source === "bq-demo" && bqDemoMeta
@@ -376,13 +368,14 @@ function MonthlyStatusCard({ source }: { source: DataSource }) {
     <SectionCard
       title="今月の状態"
       icon={<TrendingUp size={16} />}
+      className="h-full"
       action={
         <Pill tone={source === "sample" ? "slate" : "mint"} size="xs">
           {sourceLabel}
         </Pill>
       }
     >
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
         <StatusTile
           label="売上"
           value="+8.4%"
@@ -429,10 +422,10 @@ function StatusTile({
         : "border-amber-200 bg-amber-50/60 text-amber-800";
 
   return (
-    <div className={`rounded-lg border p-3 ${cls}`}>
-      <div className="text-xs font-semibold">{label}</div>
-      <div className="mt-1 text-xl font-semibold tracking-tight">{value}</div>
-      <div className="text-[11px] text-slate-500">{note}</div>
+    <div className={`min-h-[92px] rounded-lg border p-3 ${cls}`}>
+      <div className="text-sm font-semibold">{label}</div>
+      <div className="mt-1 text-2xl font-semibold tracking-tight">{value}</div>
+      <div className="text-xs text-slate-600">{note}</div>
     </div>
   );
 }
@@ -442,6 +435,7 @@ function AiBriefCard() {
     <SectionCard
       title="AI月次診断"
       icon={<Sparkles size={16} />}
+      className="h-full"
       action={
         <Pill tone="gold" size="xs">
           サンプル文言
@@ -480,7 +474,8 @@ function NextActionCard() {
     <SectionCard
       title="次に実行"
       icon={<Target size={16} />}
-      action={<span className="text-[11px] text-slate-500">今週</span>}
+      className="h-full"
+      action={<span className="text-xs text-slate-500">今週</span>}
     >
       <div className="rounded-lg border border-navy-100 bg-navy-50/70 p-3">
         <div className="text-sm font-semibold text-navy-900">
@@ -529,7 +524,7 @@ function WorkbenchTabs({
   ] as const;
 
   return (
-    <div role="tablist" aria-label="ワークベンチ切替" className="flex gap-1">
+    <div role="tablist" aria-label="ワークベンチ切替" className="flex flex-wrap gap-2">
       {tabs.map((tab) => (
         <button
           key={tab.id}
@@ -537,7 +532,7 @@ function WorkbenchTabs({
           role="tab"
           aria-selected={active === tab.id}
           onClick={() => onChange(tab.id)}
-          className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+          className={`rounded-md px-3 py-1.5 text-sm font-medium ${
             active === tab.id
               ? "bg-navy-900 text-white"
               : "text-slate-600 hover:bg-slate-100"
@@ -552,16 +547,16 @@ function WorkbenchTabs({
 
 function ActionsWorkbench({ top5 }: { top5: typeof actions }) {
   return (
-    <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-      <div className="min-w-0">
-        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-          <Pill tone="rose" size="xs">P1優先</Pill>
-          <Pill tone="sky" size="xs">今週対応</Pill>
-          <span>インパクト × 実行しやすさで並べ替え</span>
-        </div>
-        <PriorityMap actions={actions} />
-      </div>
+    <div className="space-y-4 p-4">
       <ActionTable top5={top5} />
+      <details className="rounded-lg border border-slate-200 bg-white">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-800">
+          優先度マップを開く
+        </summary>
+        <div className="border-t border-slate-100 p-4">
+          <PriorityMap actions={actions} />
+        </div>
+      </details>
     </div>
   );
 }
