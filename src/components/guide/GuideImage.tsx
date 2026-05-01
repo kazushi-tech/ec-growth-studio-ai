@@ -12,13 +12,13 @@ type Props = {
  * - alt は意味のある日本語ラベルを必ず付ける。
  */
 export default function GuideImage({ image }: Props) {
-  const [errored, setErrored] = useState(false);
+  const [errored, setErrored] = useState(image.available === false);
 
   return (
     <figure className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 sm:p-4">
       <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-100 via-white to-slate-100">
         <div className="aspect-[16/9] w-full">
-          {!errored ? (
+          {!errored && image.available !== false ? (
             <img
               src={image.src}
               alt={image.alt}

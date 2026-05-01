@@ -921,6 +921,7 @@ export type GuideImageRefV3 = {
   alt: string;
   caption: string;
   placeholderTitle: string;
+  available?: boolean;
 };
 
 // Hero
@@ -1181,18 +1182,21 @@ export const guideImagesV3: Record<"overview" | "screenMap" | "dataScope", Guide
     alt: "AI診断・人間レビュー・施策実行・月次報告の4ノードを矢印でつなぐ月次改善ループの図",
     caption: "月次改善ループ — AI が課題候補を出し、担当者が採用を決め、施策を実行し、月次レポートで次月会議へ繋ぐ。",
     placeholderTitle: "月次改善ループの全体像",
+    available: false,
   },
   screenMap: {
     src: "/guide/screen-map.png",
     alt: "ダッシュボードを起点に、売上要因分析・AI考察・施策ボード・月次レポートへ降りていく画面の関係図",
     caption: "5画面の関係図 — ダッシュボードから要因分析・AI考察を経て施策ボード、最後に月次レポートへ向かう流れ。",
     placeholderTitle: "5画面のつながり",
+    available: false,
   },
   dataScope: {
     src: "/guide/data-scope.png",
     alt: "実値・デモ・未接続・将来予定 の4区分を示すデータ接続スコープの図",
     caption: "データ接続スコープ — 実値（CSV）/ デモ（BigQuery mock）/ 未接続（実 API・実 AI）/ 将来予定（Phase 3 / 4）。",
     placeholderTitle: "データ接続スコープ",
+    available: false,
   },
 };
 
