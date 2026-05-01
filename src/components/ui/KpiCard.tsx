@@ -8,6 +8,32 @@ const intentClass = {
   neutral: "text-slate-500",
 };
 
+// 左端のインテントストライプ。ひと目で「良い / 悪い / 横ばい」を伝える。
+const stripeClass = {
+  positive: "bg-emerald-500",
+  negative: "bg-rose-500",
+  neutral: "bg-slate-300",
+};
+
+// ステータスバッジ。数字を読まなくても評価が分かるためのラベル。
+const statusBadge: Record<
+  Kpi["intent"],
+  { label: string; className: string }
+> = {
+  positive: {
+    label: "好調",
+    className: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+  },
+  negative: {
+    label: "要注視",
+    className: "bg-rose-50 text-rose-700 ring-rose-100",
+  },
+  neutral: {
+    label: "横ばい",
+    className: "bg-slate-100 text-slate-600 ring-slate-200",
+  },
+};
+
 export default function KpiCard({ kpi }: { kpi: Kpi }) {
   const trendIcon =
     kpi.trend === "up" ? (
@@ -32,9 +58,22 @@ export default function KpiCard({ kpi }: { kpi: Kpi }) {
         ? "rgba(244, 63, 94, 0.08)"
         : "rgba(100, 116, 139, 0.08)";
 
+  const badge = statusBadge[kpi.intent];
+
   return (
-    <div className="card card-hover p-4">
-      <div className="kpi-label">{kpi.label}</div>
+    <div className="card card-hover relative overflow-hidden p-4">
+      <span
+        aria-hidden
+        className={`absolute inset-y-0 left-0 w-1 ${stripeClass[kpi.intent]}`}
+      />
+      <div className="flex items-center justify-between gap-2">
+        <div className="kpi-label">{kpi.label}</div>
+        <span
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${badge.className}`}
+        >
+          {badge.label}
+        </span>
+      </div>
       <div className="mt-1 flex items-end justify-between gap-2">
         <div className="kpi-value">{kpi.value}</div>
         <div
@@ -44,7 +83,7 @@ export default function KpiCard({ kpi }: { kpi: Kpi }) {
           {kpi.delta}
         </div>
       </div>
-      <div className="mt-1 text-[11px] text-slate-400">{kpi.deltaLabel}</div>
+      <div className="mt-1 text-[11px] text-slate-500">{kpi.deltaLabel}</div>
       <div className="-mx-1 mt-2 h-12">
         <Sparkline
           data={kpi.spark}
