@@ -1,47 +1,81 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  AlertTriangle,
   ArrowRight,
   BookOpen,
+  CheckCircle2,
   ChevronRight,
   CircleHelp,
+  Database,
   FileText,
-  Layers,
+  LayoutGrid,
   ListChecks,
-  Map as MapIcon,
+  MousePointer2,
+  Route,
   Sparkles,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
-import GuideHero from "../components/guide/GuideHero";
-import GuideToc from "../components/guide/GuideToc";
-import GuideImage from "../components/guide/GuideImage";
+import Pill from "../components/ui/Pill";
 import {
-  guideHeroV3,
-  guideFirstStepsV3,
-  guideChaptersV3,
-  guideOrderRowsV3,
-  guideScreenRowsV3,
   guideDataScopeRowsV3,
   guideFaqV3,
-  guideImagesV3,
-  type GuideStepV3,
-  type GuideChapterMetaV3,
-  type GuideOrderRowV3,
-  type GuideScreenRowV3,
+  guideFirstStepsV3,
+  guideOrderRowsV3,
+  guideScreenRowsV3,
   type GuideDataScopeRowV3,
   type GuideFaqV3,
+  type GuideOrderRowV3,
+  type GuideScreenRowV3,
+  type GuideStepV3,
 } from "../data/sample";
 
-/**
- * /app/guide — Guide v3「利用者オンボーディング」。
- * 構造: Hero / まず3ステップ / sticky TOC / 5章 (全体像 / まず触る順番 / 画面別の使い方 / データ状態の見方 / よくある疑問) / 関連ドキュメント。
- * 上司デモの台本は本ガイドからは外し、フッターから docs/demo-script.md へリンクする。
- */
+type GuideTab = "overview" | "order" | "screens" | "data" | "faq";
+
+const guideTabs: { id: GuideTab; label: string; icon: React.ReactNode }[] = [
+  { id: "overview", label: "Overview", icon: <LayoutGrid size={14} /> },
+  { id: "order", label: "操作順", icon: <Route size={14} /> },
+  { id: "screens", label: "画面別", icon: <ListChecks size={14} /> },
+  { id: "data", label: "データ状態", icon: <Database size={14} /> },
+  { id: "faq", label: "FAQ", icon: <CircleHelp size={14} /> },
+];
+
+const tabDescriptions: Record<GuideTab, string> = {
+  overview:
+    "EC Growth Studio AI の役割と、最初に見るべき3つの判断ポイントを確認する。",
+  order:
+    "毎月の運用で触る順番を、画面遷移と次アクションに分けて確認する。",
+  screens:
+    "各画面で何を見るか、どこへ進むかをGA4風の早見表で確認する。",
+  data:
+    "実値 / デモ / 未接続 / 将来予定 の区分を確認し、誤認を避ける。",
+  faq: "初見で迷いやすい質問だけを折りたたみで確認する。",
+};
+
+const dataTone: Record<
+  GuideDataScopeRowV3["tone"],
+  "mint" | "sky" | "gold" | "violet" | "rose" | "slate"
+> = {
+  navy: "slate",
+  sky: "sky",
+  mint: "mint",
+  gold: "gold",
+  violet: "violet",
+  rose: "rose",
+};
+
 export default function Guide() {
+  const [activeTab, setActiveTab] = useState<GuideTab>("overview");
+  const activeLabel = useMemo(
+    () => guideTabs.find((tab) => tab.id === activeTab)?.label ?? "Overview",
+    [activeTab],
+  );
+
   return (
     <>
       <Topbar
         title="ガイド"
-        subtitle="はじめて使う方が、何をするツールかと、まず何を触るかを5分で掴めるオンボーディング"
+        subtitle="GA4風の早見表で、月次EC改善BPaaSの触り方とデータ状態を確認"
         actions={
           <Link to="/app" className="btn-primary px-3 py-1.5 text-xs">
             ダッシュボードへ
@@ -49,549 +83,527 @@ export default function Guide() {
         }
       />
 
-      <div className="px-4 py-6 sm:px-6 sm:py-8">
-        <GuideHero hero={guideHeroV3} />
+      <div className="space-y-4 px-4 py-4 sm:px-6">
+        <GuideCommandBar />
 
-        {/* まず3ステップ */}
-        <section
-          aria-labelledby="first-steps-title"
-          className="mt-8 sm:mt-10"
-        >
-          <header className="mb-4 flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h2
-                id="first-steps-title"
-                className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl"
-              >
-                まず3ステップで始める
-              </h2>
-              <p className="mt-1 text-sm leading-7 text-slate-600">
-                難しい設定なしに、この順番で触れば全体像がつかめるぞ。
-              </p>
+        <section className="card overflow-hidden">
+          <div className="border-b border-slate-100 bg-white px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Pill tone="sky" size="xs">
+                    Guide v4
+                  </Pill>
+                  <Pill tone="gold" size="xs">
+                    実API未接続
+                  </Pill>
+                  <Pill tone="mint" size="xs">
+                    CSV-first
+                  </Pill>
+                </div>
+                <h2 className="mt-2 text-base font-semibold tracking-tight text-slate-900 sm:text-lg">
+                  月次EC改善を迷わず回すための操作ガイド
+                </h2>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span>読む順番: 目的 → 操作順 → 画面別 → データ状態</span>
+                <Link
+                  to="/app/data-import"
+                  className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  CSV取込へ
+                  <ChevronRight size={13} aria-hidden="true" />
+                </Link>
+              </div>
             </div>
-            <a
-              href="#ch-overview"
-              className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              詳しい使い方ガイドへ
-              <ArrowRight size={14} aria-hidden="true" />
-            </a>
-          </header>
-          <ol className="grid gap-4 md:grid-cols-3">
-            {guideFirstStepsV3.map((s) => (
-              <FirstStepCard key={s.num} step={s} />
-            ))}
-          </ol>
-        </section>
-
-        {/* メインガイド (TOC + 5章) */}
-        <div className="mt-10 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-8">
-          <aside className="lg:sticky lg:top-20 lg:self-start">
-            <GuideToc chapters={guideChaptersV3} />
-          </aside>
-
-          <div className="mt-6 space-y-8 lg:mt-0">
-            <ChapterOverview meta={guideChaptersV3[0]} />
-            <ChapterOrder meta={guideChaptersV3[1]} rows={guideOrderRowsV3} />
-            <ChapterScreens meta={guideChaptersV3[2]} rows={guideScreenRowsV3} />
-            <ChapterDataScope meta={guideChaptersV3[3]} rows={guideDataScopeRowsV3} />
-            <ChapterFaq meta={guideChaptersV3[4]} faqs={guideFaqV3} />
-
-            {/* フッター — 関連ドキュメント */}
-            <FooterDocs />
           </div>
-        </div>
+
+          <div className="grid min-h-[640px] min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <main className="min-w-0 overflow-hidden border-slate-100 lg:border-r">
+              <TabBar activeTab={activeTab} onChange={setActiveTab} />
+
+              <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-2.5">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                  <span className="font-semibold text-slate-800">
+                    {activeLabel}
+                  </span>
+                  <span className="text-slate-300">/</span>
+                  <span>{tabDescriptions[activeTab]}</span>
+                </div>
+              </div>
+
+              <div className="p-4">
+                {activeTab === "overview" && (
+                  <OverviewPanel steps={guideFirstStepsV3} />
+                )}
+                {activeTab === "order" && (
+                  <OrderPanel rows={guideOrderRowsV3} />
+                )}
+                {activeTab === "screens" && (
+                  <ScreensPanel rows={guideScreenRowsV3} />
+                )}
+                {activeTab === "data" && (
+                  <DataPanel rows={guideDataScopeRowsV3} />
+                )}
+                {activeTab === "faq" && <FaqPanel faqs={guideFaqV3} />}
+              </div>
+            </main>
+
+            <aside className="space-y-3 bg-slate-50/60 p-4">
+              <SideSummary />
+              <DataScopeMini rows={guideDataScopeRowsV3} />
+              <NextDocs />
+            </aside>
+          </div>
+        </section>
       </div>
     </>
   );
 }
 
-// ─── まず3ステップ カード ─────────────────────────────────────
-
-const stepToneStyles: Record<
-  GuideStepV3["tone"],
-  { badge: string; bar: string; numText: string }
-> = {
-  navy: { badge: "bg-navy-900 text-white", bar: "bg-navy-900", numText: "text-navy-900" },
-  sky: { badge: "bg-sky-500 text-white", bar: "bg-sky-500", numText: "text-sky-700" },
-  mint: { badge: "bg-emerald-500 text-white", bar: "bg-emerald-500", numText: "text-emerald-700" },
-  gold: { badge: "bg-amber-500 text-white", bar: "bg-amber-500", numText: "text-amber-700" },
-  violet: { badge: "bg-violet-500 text-white", bar: "bg-violet-500", numText: "text-violet-700" },
-  rose: { badge: "bg-rose-500 text-white", bar: "bg-rose-500", numText: "text-rose-700" },
-};
-
-function FirstStepCard({ step }: { step: GuideStepV3 }) {
-  const tone = stepToneStyles[step.tone];
-  return (
-    <li className="card overflow-hidden">
-      <div className={`h-1 w-full ${tone.bar}`} aria-hidden="true" />
-      <div className="space-y-4 p-5 sm:p-6">
-        <div className="flex items-center gap-3">
-          <span
-            className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-base font-semibold ${tone.badge}`}
-            aria-hidden="true"
-          >
-            {step.num}
-          </span>
-          <span className={`text-xs font-semibold uppercase tracking-wide ${tone.numText}`}>
-            STEP {step.num}
-          </span>
-        </div>
-        <h3 className="text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
-          {step.title}
-        </h3>
-        <p className="text-sm leading-7 text-slate-600">{step.body}</p>
-        <Link
-          to={step.to}
-          className="inline-flex items-center gap-1 text-sm font-medium text-navy-700 hover:text-navy-900"
-        >
-          {step.toLabel}
-          <ChevronRight size={14} aria-hidden="true" />
-        </Link>
-      </div>
-    </li>
-  );
-}
-
-// ─── 章ラッパー ────────────────────────────────────────────────
-
-const chapterToneStyles: Record<
-  GuideChapterMetaV3["tone"],
-  { bar: string; badge: string }
-> = {
-  navy: { bar: "bg-navy-900", badge: "bg-navy-900 text-white" },
-  sky: { bar: "bg-sky-500", badge: "bg-sky-500 text-white" },
-  mint: { bar: "bg-emerald-500", badge: "bg-emerald-500 text-white" },
-  gold: { bar: "bg-amber-500", badge: "bg-amber-500 text-white" },
-  violet: { bar: "bg-violet-500", badge: "bg-violet-500 text-white" },
-  rose: { bar: "bg-rose-500", badge: "bg-rose-500 text-white" },
-};
-
-function ChapterShell({
-  meta,
-  icon,
-  children,
-}: {
-  meta: GuideChapterMetaV3;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  const tone = chapterToneStyles[meta.tone];
+function GuideCommandBar() {
   return (
     <section
-      id={meta.id}
-      aria-labelledby={`${meta.id}-title`}
-      className="card scroll-mt-24 overflow-hidden"
+      aria-label="ガイドの要点"
+      className="grid gap-2 md:grid-cols-4"
     >
-      <div className={`h-1 w-full ${tone.bar}`} aria-hidden="true" />
-      <div className="space-y-6 px-5 py-6 sm:px-8 sm:py-8">
-        <header className="flex flex-wrap items-start gap-4">
-          <span
-            className={`inline-flex h-10 min-w-[3rem] items-center justify-center rounded-lg px-2.5 text-base font-semibold ${tone.badge}`}
-            aria-hidden="true"
-          >
-            {meta.number}
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2
-              id={`${meta.id}-title`}
-              className="flex items-center gap-2 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl"
-            >
-              {icon ? (
-                <span className="text-slate-500" aria-hidden="true">
-                  {icon}
-                </span>
-              ) : null}
-              {meta.title}
-            </h2>
-            <p className="mt-2 text-sm leading-7 text-slate-600 sm:text-base sm:leading-8">
-              {meta.intro}
-            </p>
-          </div>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
-            約{meta.estMin}分
-          </span>
-        </header>
-
-        {children}
-      </div>
+      <CompactMetric
+        icon={<Sparkles size={14} />}
+        label="このツール"
+        value="月次EC改善ループ"
+        note="AI診断から実行管理まで"
+        tone="navy"
+      />
+      <CompactMetric
+        icon={<MousePointer2 size={14} />}
+        label="まずやること"
+        value="データ → 課題 → 施策"
+        note="3ステップで開始"
+        tone="sky"
+      />
+      <CompactMetric
+        icon={<Database size={14} />}
+        label="データ状態"
+        value="実値 / デモ / 未接続"
+        note="区分を常時明示"
+        tone="mint"
+      />
+      <CompactMetric
+        icon={<AlertTriangle size={14} />}
+        label="注意"
+        value="実APIは未接続"
+        note="Productionは安全停止"
+        tone="gold"
+      />
     </section>
   );
 }
 
-// ─── 01 全体像 ────────────────────────────────────────────────
+function CompactMetric({
+  icon,
+  label,
+  value,
+  note,
+  tone,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  note: string;
+  tone: "navy" | "sky" | "mint" | "gold";
+}) {
+  const toneClass =
+    tone === "navy"
+      ? "border-navy-200 bg-white text-navy-900"
+      : tone === "sky"
+        ? "border-sky-200 bg-sky-50/60 text-sky-900"
+        : tone === "mint"
+          ? "border-emerald-200 bg-emerald-50/60 text-emerald-900"
+          : "border-amber-200 bg-amber-50/60 text-amber-900";
 
-function ChapterOverview({ meta }: { meta: GuideChapterMetaV3 }) {
   return (
-    <ChapterShell meta={meta} icon={<Sparkles size={20} />}>
-      <GuideImage image={guideImagesV3.overview} />
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <OverviewItem
-          label="AI診断"
-          body="商品 / 流入 / CRM / 在庫 の4領域で、課題と改善機会の候補を量で出す。"
-        />
-        <OverviewItem
-          label="人間レビュー"
-          body="AI が出した候補から、採用するものと優先順位を担当者が決める。"
-        />
-        <OverviewItem
-          label="施策実行"
-          body="施策ボードで担当・期限・期待値を埋めて運用に乗せる。"
-        />
-        <OverviewItem
-          label="月次報告"
-          body="月次レポートに整え、末尾の「次月の優先施策3件」で翌月会議へ繋ぐ。"
-        />
+    <div className={`rounded-lg border px-3 py-2.5 ${toneClass}`}>
+      <div className="flex items-center gap-1.5 text-xs font-semibold">
+        <span className="text-slate-500" aria-hidden="true">
+          {icon}
+        </span>
+        {label}
       </div>
-
-      <details className="group rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-slate-800">
-          <span>このループが大事な理由（もっと詳しく）</span>
-          <ChevronRight
-            size={16}
-            className="shrink-0 text-slate-400 transition-transform group-open:rotate-90"
-            aria-hidden="true"
-          />
-        </summary>
-        <div className="mt-3 space-y-3 text-sm leading-7 text-slate-700">
-          <p>
-            EC の改善は「気づき」だけでは進まない。誰が・いつまでに・何を・どこまでやるか まで埋めて初めて運用に乗る。本ツールは AI による気づきの量を担保しつつ、最終判断と実行管理を担当者の手に残すために設計されておる。
-          </p>
-          <p>
-            毎月同じ順序で同じ画面を回すことで、属人性を抑え、担当が変わっても継続できる運用にする。これが「BPaaS（Business Process as a Service）」として伴走する側面じゃ。
-          </p>
-        </div>
-      </details>
-    </ChapterShell>
-  );
-}
-
-function OverviewItem({ label, body }: { label: string; body: string }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-      <div className="text-sm font-semibold text-navy-900">{label}</div>
-      <p className="mt-1.5 text-sm leading-7 text-slate-700">{body}</p>
+      <div className="mt-1 text-sm font-semibold tracking-tight">{value}</div>
+      <div className="mt-0.5 text-xs text-slate-500">{note}</div>
     </div>
   );
 }
 
-// ─── 02 まず触る順番 ──────────────────────────────────────────
-
-function ChapterOrder({
-  meta,
-  rows,
+function TabBar({
+  activeTab,
+  onChange,
 }: {
-  meta: GuideChapterMetaV3;
-  rows: GuideOrderRowV3[];
+  activeTab: GuideTab;
+  onChange: (tab: GuideTab) => void;
 }) {
   return (
-    <ChapterShell meta={meta} icon={<ListChecks size={20} />}>
-      <ol className="space-y-3">
-        {rows.map((r) => (
-          <li
-            key={r.num}
-            className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-start sm:gap-5 sm:p-5"
+    <div
+      role="tablist"
+      aria-label="ガイドカテゴリ"
+      className="flex w-full max-w-full gap-1 overflow-x-auto border-b border-slate-100 bg-white px-3 py-2"
+    >
+      {guideTabs.map((tab) => {
+        const active = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(tab.id)}
+            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              active
+                ? "bg-navy-900 text-white"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            }`}
           >
-            <span
-              aria-hidden="true"
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-500 text-base font-semibold text-white"
-            >
-              {r.num}
-            </span>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-base font-semibold text-slate-900">
-                {r.title}
-              </h3>
-              <p className="mt-1.5 text-sm leading-7 text-slate-700">
-                {r.body}
-              </p>
-            </div>
-            <Link
-              to={r.to}
-              className="inline-flex shrink-0 items-center gap-1 self-start rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-navy-300 hover:bg-slate-50 hover:text-navy-900"
-            >
-              {r.toLabel}
-              <ChevronRight size={14} aria-hidden="true" />
-            </Link>
-          </li>
-        ))}
-      </ol>
-
-      <aside
-        role="note"
-        className="rounded-xl border border-sky-200 bg-sky-50/60 px-4 py-3 sm:px-5 sm:py-4"
-      >
-        <p className="text-sm leading-7 text-slate-700">
-          <span className="font-semibold text-sky-800">ポイント</span>
-          <span className="mx-1.5 text-sky-400" aria-hidden="true">·</span>
-          毎月この順序で回すこと自体が運用設計じゃ。順番を入れ替えると、AI の気づきが施策ボードに乗らず、効果検証も翌月レポートに反映されにくくなる。
-        </p>
-      </aside>
-    </ChapterShell>
+            <span aria-hidden="true">{tab.icon}</span>
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
-// ─── 03 画面別の使い方 ────────────────────────────────────────
-
-function ChapterScreens({
-  meta,
-  rows,
-}: {
-  meta: GuideChapterMetaV3;
-  rows: GuideScreenRowV3[];
-}) {
+function OverviewPanel({ steps }: { steps: GuideStepV3[] }) {
   return (
-    <ChapterShell meta={meta} icon={<Layers size={20} />}>
-      <GuideImage image={guideImagesV3.screenMap} />
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-3">
+          {steps.map((step) => (
+            <div
+              key={step.num}
+              className="rounded-lg border border-slate-200 bg-white p-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-navy-900 text-xs font-semibold text-white">
+                  {step.num}
+                </span>
+                <Link
+                  to={step.to}
+                  className="text-xs font-medium text-sky-700 hover:text-sky-900"
+                >
+                  {step.toLabel}
+                </Link>
+              </div>
+              <h3 className="mt-3 text-sm font-semibold text-slate-900">
+                {step.title}
+              </h3>
+              <p className="mt-1.5 text-xs leading-5 text-slate-600">
+                {step.body}
+              </p>
+            </div>
+          ))}
+        </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200">
-        <table className="table-clean min-w-[40rem]">
+        <div className="rounded-lg border border-slate-200 bg-white">
+          <div className="border-b border-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">
+            月次改善ループ
+          </div>
+          <div className="grid gap-2 p-3 sm:grid-cols-4">
+            {[
+              ["AI診断", "候補を量で出す", "violet"],
+              ["人間レビュー", "採用を決める", "mint"],
+              ["施策実行", "担当・期限を持つ", "sky"],
+              ["月次報告", "翌月会議へ繋ぐ", "navy"],
+            ].map(([label, note, tone]) => (
+              <div key={label} className="rounded-md border border-slate-100 bg-slate-50/70 p-3">
+                <Pill
+                  tone={
+                    tone === "violet"
+                      ? "violet"
+                      : tone === "mint"
+                        ? "mint"
+                        : tone === "sky"
+                          ? "sky"
+                          : "slate"
+                  }
+                  size="xs"
+                >
+                  {label}
+                </Pill>
+                <p className="mt-2 text-xs leading-5 text-slate-600">{note}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900">
+          <AlertTriangle size={14} aria-hidden="true" />
+          最初に共有する前提
+        </div>
+        <p className="mt-2 text-xs leading-6 text-amber-900">
+          本MVPは実 GCP / 実 BigQuery / 実 GA4 API / 実広告API / 実AI API
+          には未接続。CSV取込と Preview 限定デモで運用フローを確認する。
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function OrderPanel({ rows }: { rows: GuideOrderRowV3[] }) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table className="table-clean min-w-[48rem]">
+        <thead>
+          <tr>
+            <th className="!w-12">Step</th>
+            <th>操作</th>
+            <th>見るもの</th>
+            <th className="!w-36">開く画面</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.num}>
+              <td className="font-mono text-xs text-slate-400">{row.num}</td>
+              <td className="font-medium text-slate-900">{row.title}</td>
+              <td className="text-sm leading-6 text-slate-600">{row.body}</td>
+              <td>
+                <Link
+                  to={row.to}
+                  className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  {row.toLabel}
+                  <ChevronRight size={12} aria-hidden="true" />
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ScreensPanel({ rows }: { rows: GuideScreenRowV3[] }) {
+  return (
+    <div className="space-y-3">
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table className="table-clean min-w-[52rem]">
           <thead>
             <tr>
-              <th scope="col" className="w-[18%]">画面</th>
-              <th scope="col" className="w-[42%]">何を見る</th>
-              <th scope="col" className="w-[40%]">次にすること</th>
+              <th className="!w-40">画面</th>
+              <th>何を見る</th>
+              <th>次にすること</th>
+              <th className="!w-24">移動</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <th scope="row" className="px-3 py-3 text-left align-top">
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td className="font-medium text-navy-900">{row.name}</td>
+                <td className="text-sm leading-6 text-slate-600">{row.watch}</td>
+                <td className="text-sm leading-6 text-slate-600">{row.next}</td>
+                <td>
                   <Link
-                    to={r.to}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-navy-800 hover:text-navy-900"
+                    to={row.to}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-sky-700 hover:text-sky-900"
                   >
-                    {r.name}
-                    <ChevronRight size={12} aria-hidden="true" />
+                    開く
+                    <ArrowRight size={12} aria-hidden="true" />
                   </Link>
-                </th>
-                <td className="align-top text-sm leading-7">{r.watch}</td>
-                <td className="align-top text-sm leading-7">{r.next}</td>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          各画面の補足
-        </p>
-        {rows.map((r) => (
+      <div className="grid gap-2 md:grid-cols-2">
+        {rows.map((row) => (
           <details
-            key={`${r.id}-detail`}
-            className="group rounded-xl border border-slate-200 bg-white p-4"
+            key={`${row.id}-detail`}
+            className="group rounded-lg border border-slate-200 bg-white p-3"
           >
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-slate-800">
-              <span>{r.name} — もっと詳しく</span>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-slate-800">
+              <span>{row.name} の補足</span>
               <ChevronRight
-                size={16}
-                className="shrink-0 text-slate-400 transition-transform group-open:rotate-90"
+                size={14}
+                className="text-slate-400 transition-transform group-open:rotate-90"
                 aria-hidden="true"
               />
             </summary>
-            <p className="mt-3 text-sm leading-7 text-slate-700">{r.detail}</p>
-            <div className="mt-3">
-              <Link
-                to={r.to}
-                className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-navy-300 hover:bg-slate-50 hover:text-navy-900"
-              >
-                {r.name} を開く
-                <ChevronRight size={13} aria-hidden="true" />
-              </Link>
-            </div>
+            <p className="mt-2 text-xs leading-6 text-slate-600">{row.detail}</p>
           </details>
         ))}
       </div>
-    </ChapterShell>
+    </div>
   );
 }
 
-// ─── 04 データ状態の見方 ──────────────────────────────────────
-
-const dataScopeRowStyles: Record<
-  GuideDataScopeRowV3["tone"],
-  { chip: string }
-> = {
-  navy: { chip: "bg-navy-50 text-navy-900 ring-1 ring-navy-100" },
-  sky: { chip: "bg-sky-50 text-sky-700 ring-1 ring-sky-100" },
-  mint: { chip: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" },
-  gold: { chip: "bg-amber-50 text-amber-700 ring-1 ring-amber-100" },
-  violet: { chip: "bg-violet-50 text-violet-700 ring-1 ring-violet-100" },
-  rose: { chip: "bg-rose-50 text-rose-700 ring-1 ring-rose-100" },
-};
-
-function ChapterDataScope({
-  meta,
-  rows,
-}: {
-  meta: GuideChapterMetaV3;
-  rows: GuideDataScopeRowV3[];
-}) {
+function DataPanel({ rows }: { rows: GuideDataScopeRowV3[] }) {
   return (
-    <ChapterShell meta={meta} icon={<MapIcon size={20} />}>
-      <GuideImage image={guideImagesV3.dataScope} />
-
-      <div className="overflow-x-auto rounded-xl border border-slate-200">
-        <table className="table-clean min-w-[40rem]">
+    <div className="space-y-3">
+      <div className="grid gap-2 md:grid-cols-4">
+        {rows.map((row) => (
+          <div
+            key={row.category}
+            className="rounded-lg border border-slate-200 bg-white p-3"
+          >
+            <Pill tone={dataTone[row.tone]} size="xs">
+              {row.category}
+            </Pill>
+            <p className="mt-2 text-xs leading-5 text-slate-600">
+              {row.example}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table className="table-clean min-w-[44rem]">
           <thead>
             <tr>
-              <th scope="col" className="w-[18%]">区分</th>
-              <th scope="col" className="w-[42%]">具体例</th>
-              <th scope="col" className="w-[40%]">どの数字が動くか</th>
+              <th className="!w-28">区分</th>
+              <th>具体例</th>
+              <th>数字への影響</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.category}>
-                <th scope="row" className="px-3 py-3 text-left align-top">
-                  <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${dataScopeRowStyles[r.tone].chip}`}
-                  >
-                    {r.category}
-                  </span>
-                </th>
-                <td className="align-top text-sm leading-7">{r.example}</td>
-                <td className="align-top text-sm leading-7">{r.flow}</td>
+            {rows.map((row) => (
+              <tr key={row.category}>
+                <td>
+                  <Pill tone={dataTone[row.tone]} size="xs">
+                    {row.category}
+                  </Pill>
+                </td>
+                <td>{row.example}</td>
+                <td>{row.flow}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
-      <details className="group rounded-xl border border-rose-200 bg-rose-50/40 p-4 sm:p-5">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-rose-800">
-          <span>注意 — 誤認させる文言は使わない</span>
+      <details className="group rounded-lg border border-rose-200 bg-rose-50/50 p-3">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-rose-800">
+          <span>誤認を避ける表現ルール</span>
           <ChevronRight
-            size={16}
-            className="shrink-0 text-rose-400 transition-transform group-open:rotate-90"
+            size={14}
+            className="text-rose-400 transition-transform group-open:rotate-90"
             aria-hidden="true"
           />
         </summary>
-        <p className="mt-3 text-sm leading-7 text-slate-700">
-          「接続完了」「実データと接続済み」のような完了形の表現はデモ・資料・画面のいずれでも使わない方針じゃ。常に上の4区分（実値 / デモ / 未接続 / 将来予定）で話すようにしてほしい。Production 環境では BigQuery デモ Mode のトグルを ON にしても安全に停止し、CSV / サンプル値にフォールバックする。
+        <p className="mt-2 text-xs leading-6 text-slate-700">
+          接続完了のように見える完了形の表現は使わない。常に「実値 / デモ /
+          未接続 / 将来予定」の区分で説明する。
         </p>
       </details>
-    </ChapterShell>
+    </div>
   );
 }
 
-// ─── 05 よくある疑問 ──────────────────────────────────────────
-
-function ChapterFaq({
-  meta,
-  faqs,
-}: {
-  meta: GuideChapterMetaV3;
-  faqs: GuideFaqV3[];
-}) {
+function FaqPanel({ faqs }: { faqs: GuideFaqV3[] }) {
   return (
-    <ChapterShell meta={meta} icon={<CircleHelp size={20} />}>
-      <ol className="space-y-3">
-        {faqs.map((f, i) => (
-          <li key={f.q}>
-            <details className="group rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-              <summary className="flex cursor-pointer list-none items-start justify-between gap-3 text-base font-semibold text-slate-900">
-                <span className="flex min-w-0 items-start gap-3">
-                  <span
-                    aria-hidden="true"
-                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rose-50 text-sm font-semibold text-rose-700 ring-1 ring-rose-100"
-                  >
-                    Q{i + 1}
-                  </span>
-                  <span>{f.q}</span>
-                </span>
-                <ChevronRight
-                  size={16}
-                  className="mt-1 shrink-0 text-slate-400 transition-transform group-open:rotate-90"
-                  aria-hidden="true"
-                />
-              </summary>
-              <p className="mt-3 pl-10 text-sm leading-7 text-slate-700">
-                {f.a}
-              </p>
-            </details>
-          </li>
-        ))}
-      </ol>
-    </ChapterShell>
-  );
-}
-
-// ─── フッター — 関連ドキュメント ──────────────────────────────
-
-function FooterDocs() {
-  return (
-    <section
-      aria-labelledby="footer-docs-title"
-      className="card overflow-hidden"
-    >
-      <div className="px-5 py-6 sm:px-8 sm:py-8">
-        <div className="flex items-center gap-2">
-          <BookOpen size={18} className="text-slate-500" aria-hidden="true" />
-          <h2
-            id="footer-docs-title"
-            className="text-lg font-semibold tracking-tight text-slate-900 sm:text-xl"
-          >
-            次に読む
-          </h2>
-        </div>
-        <p className="mt-2 text-sm leading-7 text-slate-600">
-          上司・社内向けに説明するときは台本を、画面別の細かい仕様は製品仕様を参照してくれ。
-        </p>
-        <ul
-          aria-label="関連ドキュメント"
-          className="mt-5 grid gap-4 md:grid-cols-2"
+    <div className="grid min-w-0 gap-2 lg:grid-cols-2">
+      {faqs.map((faq, index) => (
+        <details
+          key={faq.q}
+          className="group min-w-0 rounded-lg border border-slate-200 bg-white p-3"
         >
-          <li>
-            <article className="flex h-full flex-col rounded-xl border border-slate-200 bg-slate-50/40 p-5">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                <FileText size={16} className="text-rose-500" aria-hidden="true" />
-                社内説明・上司デモ用台本を見る
-              </div>
-              <p className="mt-2 text-sm leading-7 text-slate-600">
-                5〜10分でデモする際の話す内容と、誤認を避けるための前置き例をまとめた台本じゃ。本ガイドからは外してこちらに退避しておる。
-              </p>
-              <p className="mt-3 font-mono text-xs text-slate-500">
-                docs/demo-script.md
-              </p>
-              <a
-                href="https://github.com/kazushi-tech/ec-growth-studio-ai/blob/main/docs/demo-script.md"
-                target="_blank"
-                rel="noreferrer"
-                className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-medium text-navy-700 hover:text-navy-900"
-              >
-                docs/demo-script.md を開く
-                <ArrowRight size={14} aria-hidden="true" />
-              </a>
-            </article>
-          </li>
-          <li>
-            <article className="flex h-full flex-col rounded-xl border border-slate-200 bg-slate-50/40 p-5">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                <FileText size={16} className="text-navy-700" aria-hidden="true" />
-                プロダクト仕様の正本
-              </div>
-              <p className="mt-2 text-sm leading-7 text-slate-600">
-                画面別の仕様、データ接続状況、Phase ロードマップは製品仕様にまとめておる。
-              </p>
-              <p className="mt-3 font-mono text-xs text-slate-500">
-                docs/product-spec.md
-              </p>
-              <a
-                href="https://github.com/kazushi-tech/ec-growth-studio-ai/blob/main/docs/product-spec.md"
-                target="_blank"
-                rel="noreferrer"
-                className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-medium text-navy-700 hover:text-navy-900"
-              >
-                docs/product-spec.md を開く
-                <ArrowRight size={14} aria-hidden="true" />
-              </a>
-            </article>
-          </li>
-        </ul>
+          <summary className="flex min-w-0 cursor-pointer list-none items-start justify-between gap-2 text-sm font-semibold text-slate-900">
+            <span className="flex min-w-0 items-start gap-2 break-words">
+              <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-50 text-xs font-semibold text-rose-700 ring-1 ring-rose-100">
+                Q{index + 1}
+              </span>
+              {faq.q}
+            </span>
+            <ChevronRight
+              size={14}
+              className="mt-1 shrink-0 text-slate-400 transition-transform group-open:rotate-90"
+              aria-hidden="true"
+            />
+          </summary>
+          <p className="mt-2 break-words pl-8 text-xs leading-6 text-slate-600">
+            {faq.a}
+          </p>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+function SideSummary() {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+        <CheckCircle2 size={14} className="text-emerald-600" aria-hidden="true" />
+        この画面で分かること
       </div>
-    </section>
+      <ul className="mt-2 space-y-1.5 text-xs leading-5 text-slate-600">
+        <li>・最初に触る順番</li>
+        <li>・画面ごとの判断ポイント</li>
+        <li>・どの数字が実値/デモ/未接続か</li>
+      </ul>
+    </div>
+  );
+}
+
+function DataScopeMini({ rows }: { rows: GuideDataScopeRowV3[] }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+        <Database size={14} aria-hidden="true" />
+        データ状態
+      </div>
+      <div className="mt-2 space-y-1.5">
+        {rows.map((row) => (
+          <div
+            key={row.category}
+            className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1.5"
+          >
+            <Pill tone={dataTone[row.tone]} size="xs">
+              {row.category}
+            </Pill>
+            <span className="truncate text-xs text-slate-500">{row.example}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NextDocs() {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+        <BookOpen size={14} aria-hidden="true" />
+        関連ドキュメント
+      </div>
+      <div className="mt-2 space-y-2 text-xs">
+        <a
+          href="https://github.com/kazushi-tech/ec-growth-studio-ai/blob/main/docs/demo-script.md"
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-between gap-2 rounded-md border border-slate-100 px-2 py-2 font-medium text-slate-700 hover:bg-slate-50"
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <FileText size={13} aria-hidden="true" />
+            デモ台本
+          </span>
+          <ChevronRight size={13} aria-hidden="true" />
+        </a>
+        <a
+          href="https://github.com/kazushi-tech/ec-growth-studio-ai/blob/main/docs/product-spec.md"
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-between gap-2 rounded-md border border-slate-100 px-2 py-2 font-medium text-slate-700 hover:bg-slate-50"
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <FileText size={13} aria-hidden="true" />
+            製品仕様
+          </span>
+          <ChevronRight size={13} aria-hidden="true" />
+        </a>
+      </div>
+    </div>
   );
 }
