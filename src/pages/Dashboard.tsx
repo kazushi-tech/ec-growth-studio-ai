@@ -50,6 +50,16 @@ type BqDemoFailure =
   | { kind: "unavailable" }
   | { kind: "error"; message: string };
 
+const PRODUCTION_BQ_DEMO_SAFE_STOP_HOSTS = new Set([
+  "ec-growth-studio-ai.vercel.app",
+  "ec-growth-studio-ai-kazushis-projects-49d4e473.vercel.app",
+]);
+
+function shouldClientStopBqDemoOnProduction(): boolean {
+  if (typeof window === "undefined") return false;
+  return PRODUCTION_BQ_DEMO_SAFE_STOP_HOSTS.has(window.location.hostname);
+}
+
 export default function Dashboard() {
   const { ordersImport, ga4Import, adsImport } = useImport();
   const top5 = actions.slice(0, 5);
@@ -76,6 +86,12 @@ export default function Dashboard() {
     const controller = new AbortController();
     setBqDemoLoading(true);
     setBqDemoFailure(null);
+    if (shouldClientStopBqDemoOnProduction()) {
+      setBqDemoFailure({ kind: "unavailable" });
+      setBqDemoLoading(false);
+      setBqDemoData(null);
+      return () => controller.abort();
+    }
     fetchBqOrdersDaily({
       from: BQ_DEMO_DEFAULT_FROM,
       to: BQ_DEMO_DEFAULT_TO,
