@@ -15,11 +15,13 @@ import {
   Lightbulb,
   AlertCircle,
   Info,
+  LayoutGrid,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import KpiCard from "../components/ui/KpiCard";
 import SectionCard from "../components/ui/SectionCard";
-import StepFlow from "../components/ui/StepFlow";
+import CycleProgress from "../components/ui/CycleProgress";
+import PriorityMap from "../components/ui/PriorityMap";
 import Pill, {
   impactTone,
   judgmentTone,
@@ -276,8 +278,8 @@ export default function Dashboard() {
               </span>
             }
           >
-            <StepFlow />
-            <div className="mt-4 space-y-2 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+            <CycleProgress />
+            <div className="mt-3 space-y-2 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
               <div className="flex items-center gap-2">
                 <Users size={12} /> 担当: EC Growth Studio Team
               </div>
@@ -287,6 +289,19 @@ export default function Dashboard() {
             </div>
           </SectionCard>
         </div>
+
+        {/* Priority map row */}
+        <SectionCard
+          title="施策の優先度マップ"
+          icon={<LayoutGrid size={16} />}
+          action={
+            <span className="text-[11px] text-slate-500">
+              インパクト × 実行しやすさ で見る次の一手
+            </span>
+          }
+        >
+          <PriorityMap actions={actions} />
+        </SectionCard>
 
         {/* TOP5 + Product judgment row */}
         <div className="grid gap-5 lg:grid-cols-12">
@@ -736,22 +751,69 @@ function DataStateSummary({
     },
   ];
 
+  // tone → 上端ストライプ色のマップ。動的Tailwind禁止のため固定文字列で持つ。
+  const stripeByTone: Record<typeof items[number]["tone"], string> = {
+    mint: "bg-emerald-500",
+    sky: "bg-sky-500",
+    gold: "bg-amber-400",
+    slate: "bg-slate-300",
+  };
+
   return (
     <SectionCard
       title="データ状態サマリー"
       icon={<Database size={16} />}
       action={
         <span className="text-[11px] text-slate-500">
-          実値 / デモ / 未接続を一目で確認
+          実値 / デモ / 未接続 / サンプル を一目で確認
         </span>
       }
     >
+      {/* 凡例 — 4区分のトーン定義をひと目で確認できるようにする */}
+      <ul
+        className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-600"
+        aria-label="データ状態の凡例"
+      >
+        <li className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="inline-block h-2 w-3 rounded-sm bg-emerald-500"
+          />
+          <span>実値（CSV取込）</span>
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="inline-block h-2 w-3 rounded-sm bg-sky-500"
+          />
+          <span>デモ（Preview限定 mock）</span>
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="inline-block h-2 w-3 rounded-sm bg-amber-400"
+          />
+          <span>未取込 / サンプル文言</span>
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="inline-block h-2 w-3 rounded-sm bg-slate-300"
+          />
+          <span>未接続</span>
+        </li>
+      </ul>
+
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {items.map((it) => (
           <div
             key={it.label}
-            className="rounded-xl border border-slate-100 bg-white p-3"
+            className="relative overflow-hidden rounded-xl border border-slate-100 bg-white p-3 pt-3.5"
           >
+            <span
+              aria-hidden
+              className={`absolute inset-x-0 top-0 h-1 ${stripeByTone[it.tone]}`}
+            />
             <div className="flex items-center justify-between gap-1">
               <span className="text-[11px] font-semibold text-slate-700">
                 {it.label}
