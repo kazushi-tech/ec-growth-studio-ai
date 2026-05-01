@@ -94,14 +94,14 @@
   }
 
   .kpi-label {
-    @apply text-xs font-medium text-slate-500;
+    @apply text-sm font-medium text-slate-600;
   }
   .kpi-value {
-    @apply text-2xl font-semibold tracking-tight text-slate-900;
+    @apply text-3xl font-semibold tracking-tight text-slate-900;
   }
 
   .section-title {
-    @apply flex items-center gap-2 text-sm font-semibold text-slate-700;
+    @apply flex items-center gap-2 text-base font-semibold text-slate-800;
   }
 
   .table-clean {
