@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   Upload,
@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Cloud,
+  ChevronDown,
   ChevronRight,
   Plug,
   Beaker,
@@ -163,6 +164,10 @@ export default function DataImport() {
           メモリ／ブラウザ保存のみ。外部送信なし。
         </div>
 
+        <div className="grid gap-4 min-[1400px]:grid-cols-[15rem_minmax(0,1fr)]">
+          <DataImportLeftRail triggerSelect={triggerSelect} csvMode={csvMode} />
+
+          <div className="min-w-0 space-y-5">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <ChartFrame
             title="診断データ充足率"
@@ -198,6 +203,7 @@ export default function DataImport() {
         </div>
 
         {/* Connection-state guide — explain what's real CSV vs demo vs not-yet-connected */}
+        <div id="data-import-current" className="scroll-mt-24">
         <SectionCard
           title="現在の接続状態（デモで見せられる範囲）"
           icon={<Activity size={16} />}
@@ -251,8 +257,10 @@ export default function DataImport() {
             </div>
           </div>
         </SectionCard>
+        </div>
 
         {/* EC linkage stance — explain that we don't host the EC site */}
+        <div id="data-import-readiness" className="scroll-mt-24 space-y-5">
         <SectionCard title="ECサイト連携の考え方" icon={<Plug size={16} />}>
           <div className="grid gap-3 lg:grid-cols-3">
             <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
@@ -368,8 +376,10 @@ export default function DataImport() {
             </p>
           </div>
         </SectionCard>
+        </div>
 
         {/* Connection summary */}
+        <div id="data-import-summary" className="scroll-mt-24">
         <SectionCard title="データ接続サマリー" icon={<Database size={16} />}>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
             <SummaryItem
@@ -415,6 +425,7 @@ export default function DataImport() {
             />
           </div>
         </SectionCard>
+        </div>
 
         {/* Failed import panel — shown when the most recent upload could not be applied */}
         {lastFailure && (
@@ -1217,6 +1228,7 @@ export default function DataImport() {
         )}
 
         {/* Two cols: data source list / AI diagnosis influence */}
+        <div id="data-import-sources" className="scroll-mt-24">
         <div className="grid min-w-0 gap-5 lg:grid-cols-3">
           <SectionCard
             className="min-w-0 lg:col-span-2"
@@ -1350,8 +1362,10 @@ export default function DataImport() {
             </div>
           </SectionCard>
         </div>
+        </div>
 
         {/* Upload + Flow + API */}
+        <div id="data-import-upload" className="scroll-mt-24">
         <div className="grid gap-5 lg:grid-cols-12">
           <SectionCard
             className="lg:col-span-5"
@@ -1700,9 +1714,13 @@ export default function DataImport() {
             </div>
           </SectionCard>
         </div>
+        </div>
 
         {/* Bottom action bar */}
-        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-navy-950 px-4 py-3 text-white">
+        <div
+          id="data-import-actions"
+          className="flex scroll-mt-24 flex-wrap items-center gap-2 rounded-xl bg-navy-950 px-4 py-3 text-white"
+        >
           <button
             className="btn px-3 py-1.5 text-sm bg-white/10 text-white hover:bg-white/20"
             onClick={triggerSelect}
@@ -1736,8 +1754,147 @@ export default function DataImport() {
             <Download size={14} /> データテンプレートを取得
           </a>
         </div>
+          </div>
+        </div>
       </div>
     </>
+  );
+}
+
+function DataImportLeftRail({
+  triggerSelect,
+  csvMode,
+}: {
+  triggerSelect: () => void;
+  csvMode: CsvMode;
+}) {
+  const modeLabel =
+    csvMode === "ga4" ? "GA4 CSV" : csvMode === "ads" ? "広告CSV" : "注文CSV";
+
+  return (
+    <aside className="min-w-0 min-[1400px]:sticky min-[1400px]:top-24 min-[1400px]:self-start">
+      <SectionCard
+        title="取込メニュー"
+        icon={<Database size={16} />}
+        bodyClassName="!px-3 !py-3"
+      >
+        <div className="rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2">
+          <div className="text-sm font-semibold text-slate-900">
+            まず見る順番
+          </div>
+          <p className="mt-1 text-sm leading-6 text-slate-600">
+            接続状態を確認し、CSVを入れて、売上要因分析へ進む流れです。
+          </p>
+        </div>
+
+        <div className="mt-3 space-y-2">
+          <DataImportNavGroup
+            eyebrow="01"
+            title="現在地"
+            href="#data-import-current"
+            defaultOpen
+          >
+            CSVで使える範囲、BigQueryデモ、まだ未接続の範囲を先に確認します。
+          </DataImportNavGroup>
+          <DataImportNavGroup
+            eyebrow="02"
+            title="接続準備"
+            href="#data-import-readiness"
+          >
+            ECサイト、GA4、BigQuery の役割を読み取り専用の前提で整理します。
+          </DataImportNavGroup>
+          <DataImportNavGroup
+            eyebrow="03"
+            title="接続サマリー"
+            href="#data-import-summary"
+          >
+            取込済み件数、診断データ充足率、今月の診断可否を見ます。
+          </DataImportNavGroup>
+          <DataImportNavGroup
+            eyebrow="04"
+            title="データ一覧"
+            href="#data-import-sources"
+          >
+            データソースごとの状態、方式、AI診断への影響を表で確認します。
+          </DataImportNavGroup>
+          <DataImportNavGroup
+            eyebrow="05"
+            title="CSV取込"
+            href="#data-import-upload"
+            actionLabel={`${modeLabel}へ`}
+          >
+            注文 / GA4 / 広告CSVを切り替えてアップロードします。
+          </DataImportNavGroup>
+          <DataImportNavGroup
+            eyebrow="06"
+            title="次アクション"
+            href="#data-import-actions"
+          >
+            テンプレート取得、サンプル復帰、売上要因分析への遷移を行います。
+          </DataImportNavGroup>
+        </div>
+
+        <div className="mt-3 grid gap-2">
+          <button
+            type="button"
+            className="btn-primary w-full justify-center px-3 py-2 text-sm"
+            onClick={triggerSelect}
+          >
+            <Upload size={14} /> CSVをアップロード
+          </button>
+          <Link
+            to="/app/revenue-analysis"
+            className="btn-secondary w-full justify-center px-3 py-2 text-sm"
+          >
+            <Activity size={14} /> 売上要因分析へ
+          </Link>
+        </div>
+      </SectionCard>
+    </aside>
+  );
+}
+
+function DataImportNavGroup({
+  eyebrow,
+  title,
+  href,
+  actionLabel = "移動",
+  defaultOpen = false,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  href: string;
+  actionLabel?: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details
+      className="group rounded-lg border border-slate-200 bg-white open:bg-slate-50/70"
+      open={defaultOpen}
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-800 marker:hidden">
+        <span className="inline-flex h-6 w-7 items-center justify-center rounded-md bg-slate-100 text-xs text-slate-500">
+          {eyebrow}
+        </span>
+        <span className="min-w-0 flex-1 truncate">{title}</span>
+        <ChevronDown
+          size={15}
+          className="text-slate-400 transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <div className="border-t border-slate-100 px-3 py-2">
+        <p className="text-sm leading-6 text-slate-600">{children}</p>
+        <a
+          href={href}
+          className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-sky-700 hover:text-sky-800"
+        >
+          {actionLabel}
+          <ChevronRight size={14} />
+        </a>
+      </div>
+    </details>
   );
 }
 
