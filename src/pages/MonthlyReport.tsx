@@ -250,13 +250,13 @@ export default function MonthlyReport() {
             </p>
           </section>
 
-          {/* Issues by area */}
-          <section className="border-b border-slate-100 px-8 py-6">
-            <SectionTitle
-              icon={<AlertTriangle size={14} />}
-              eyebrow="03 / Issues"
-              title="今月の課題（領域別）"
-            />
+          <ReportDetailSection
+            icon={<AlertTriangle size={14} />}
+            eyebrow="03 / Issues"
+            title="今月の課題（領域別）"
+            status="4領域"
+            tone="gold"
+          >
             <div className="mt-4 overflow-x-auto rounded-xl border border-slate-100">
               <table className="table-clean min-w-[48rem]">
                 <thead>
@@ -289,15 +289,15 @@ export default function MonthlyReport() {
                 </tbody>
               </table>
             </div>
-          </section>
+          </ReportDetailSection>
 
-          {/* Priority actions for next month */}
-          <section className="border-b border-slate-100 px-8 py-6">
-            <SectionTitle
-              icon={<Target size={14} />}
-              eyebrow="04 / Next Month"
-              title="来月の重点施策（P1）"
-            />
+          <ReportDetailSection
+            icon={<Target size={14} />}
+            eyebrow="04 / Next Month"
+            title="来月の重点施策（P1）"
+            status={`${priorityActions.length}件`}
+            tone="navy"
+          >
             <div className="mt-4 overflow-x-auto rounded-xl border border-slate-100">
               <table className="table-clean min-w-[48rem]">
                 <thead>
@@ -342,15 +342,15 @@ export default function MonthlyReport() {
                 value={monthlyStats.expectedSalesLift}
               />
             </div>
-          </section>
+          </ReportDetailSection>
 
-          {/* Data sources */}
-          <section className="border-b border-slate-100 px-8 py-6">
-            <SectionTitle
-              icon={<Database size={14} />}
-              eyebrow="05 / Data Sources"
-              title="データソース状態"
-            />
+          <ReportDetailSection
+            icon={<Database size={14} />}
+            eyebrow="05 / Data Sources"
+            title="データソース状態"
+            status={`${dataSources.length}件`}
+            tone="slate"
+          >
             <div className="mt-4 grid gap-2 md:grid-cols-2">
               {dataSources.map((d) => (
                 <div
@@ -374,15 +374,16 @@ export default function MonthlyReport() {
                 </div>
               ))}
             </div>
-          </section>
+          </ReportDetailSection>
 
-          {/* Disclosure / footnotes */}
-          <section className="rounded-b-2xl bg-slate-50/60 px-8 py-6">
-            <SectionTitle
-              icon={<Info size={14} />}
-              eyebrow="06 / Notes"
-              title="未接続範囲・デモデータ注記"
-            />
+          <ReportDetailSection
+            icon={<Info size={14} />}
+            eyebrow="06 / Notes"
+            title="未接続範囲・デモデータ注記"
+            status="注記"
+            tone="slate"
+            muted
+          >
             <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
               <li className="flex items-start gap-2">
                 <ShieldCheck size={14} className="mt-0.5 shrink-0 text-slate-400" />
@@ -429,7 +430,7 @@ export default function MonthlyReport() {
                 </span>
               </li>
             </ul>
-          </section>
+          </ReportDetailSection>
         </article>
 
         {/* === Operations panel (secondary) === */}
@@ -728,6 +729,55 @@ function DisclosurePanel({
       </summary>
       <div className="mt-3 border-t border-slate-100 pt-3">{children}</div>
     </details>
+  );
+}
+
+function ReportDetailSection({
+  eyebrow,
+  title,
+  icon,
+  status,
+  tone,
+  children,
+  muted,
+}: {
+  eyebrow: string;
+  title: string;
+  icon?: React.ReactNode;
+  status: string;
+  tone: "mint" | "gold" | "rose" | "slate" | "navy";
+  children: React.ReactNode;
+  muted?: boolean;
+}) {
+  return (
+    <section
+      className={`border-b border-slate-100 px-8 py-5 ${muted ? "bg-slate-50/60" : ""}`}
+    >
+      <details className="group" open={false}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+          <span className="min-w-0">
+            <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              {icon && <span className="text-slate-400">{icon}</span>}
+              {eyebrow}
+            </span>
+            <span className="mt-1 block border-l-4 border-navy-900 pl-2 text-base font-semibold text-slate-900">
+              {title}
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5">
+            <Pill tone={tone} size="xs">
+              {status}
+            </Pill>
+            <ChevronDown
+              size={16}
+              className="text-slate-400 transition-transform group-open:rotate-180"
+              aria-hidden="true"
+            />
+          </span>
+        </summary>
+        <div className="mt-4">{children}</div>
+      </details>
+    </section>
   );
 }
 
