@@ -45,12 +45,11 @@ const navItems: NavItem[] = [
     to: "/app/data-import",
     icon: Database,
     children: [
-      { label: "現在の接続状態", to: "/app/data-import#data-import-current" },
-      { label: "接続準備", to: "/app/data-import#data-import-readiness" },
-      { label: "接続サマリー", to: "/app/data-import#data-import-summary" },
-      { label: "データソース一覧", to: "/app/data-import#data-import-sources" },
-      { label: "CSVアップロード", to: "/app/data-import#data-import-upload" },
-      { label: "次アクション", to: "/app/data-import#data-import-actions" },
+      { label: "概要", to: "/app/data-import" },
+      { label: "データソース", to: "/app/data-import/sources" },
+      { label: "CSVアップロード", to: "/app/data-import/upload" },
+      { label: "接続準備", to: "/app/data-import/connections" },
+      { label: "次アクション", to: "/app/data-import/actions" },
     ],
   },
   { label: "AI考察レポート", to: "/app/ai-report", icon: Sparkles },
@@ -163,7 +162,6 @@ export function SidebarBody({ onNavigate }: Props) {
   const location = useLocation();
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({});
 
-  const current = `${location.pathname}${location.hash}`;
   const isPathActive = (item: NavItem) =>
     item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
 
@@ -232,7 +230,7 @@ export function SidebarBody({ onNavigate }: Props) {
               {item.children && isOpen ? (
                 <div className="mt-1 space-y-0.5 border-l border-navy-700/80 pl-3 ml-5">
                   {item.children.map((child) => {
-                    const childActive = current === child.to;
+                    const childActive = location.pathname === child.to;
                     return (
                       <Link
                         key={child.to}

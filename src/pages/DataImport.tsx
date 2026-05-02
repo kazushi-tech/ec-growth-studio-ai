@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import {
   Upload,
   Sparkles,
@@ -66,8 +66,50 @@ const stateTone = (s: DataSource["status"]) => {
 };
 
 type CsvMode = "orders" | "ga4" | "ads";
+type DataImportView = "overview" | "sources" | "upload" | "connections" | "actions";
+
+const dataImportViewMeta: Record<
+  DataImportView,
+  { title: string; subtitle: string }
+> = {
+  overview: {
+    title: "データ取込・連携",
+    subtitle: "診断データの充足率と、いま見せられる接続状態を確認",
+  },
+  sources: {
+    title: "データソース",
+    subtitle: "CSV実値・Previewデモ・将来接続を分けてAI診断への影響を見る",
+  },
+  upload: {
+    title: "CSVアップロード",
+    subtitle: "注文・GA4・広告CSVをブラウザ内で読み込み、月次診断に反映",
+  },
+  connections: {
+    title: "接続準備",
+    subtitle: "ECサイト、GA4、BigQueryの読み取り専用接続に向けた準備項目",
+  },
+  actions: {
+    title: "次アクション",
+    subtitle: "次に取り込むべきデータ、分析遷移、テンプレート取得を整理",
+  },
+};
+
+const getDataImportView = (view: string | undefined): DataImportView => {
+  if (
+    view === "sources" ||
+    view === "upload" ||
+    view === "connections" ||
+    view === "actions"
+  ) {
+    return view;
+  }
+  return "overview";
+};
 
 export default function DataImport() {
+  const { view } = useParams();
+  const activeView = getDataImportView(view);
+  const viewMeta = dataImportViewMeta[activeView];
   const {
     ordersImport,
     lastFailure,
@@ -128,17 +170,26 @@ export default function DataImport() {
   return (
     <>
       <Topbar
-        title="データ取込・連携"
-        subtitle="CSVから始めて、Shopify・GA4・広告APIへ段階的に拡張"
+        title={viewMeta.title}
+        subtitle={viewMeta.subtitle}
         actions={
           <>
-            <button
-              className="btn-primary px-3 py-1.5 text-xs"
-              onClick={triggerSelect}
-              disabled={isImporting}
-            >
-              <Upload size={12} /> CSVをアップロード
-            </button>
+            {activeView === "upload" ? (
+              <button
+                className="btn-primary px-3 py-1.5 text-xs"
+                onClick={triggerSelect}
+                disabled={isImporting}
+              >
+                <Upload size={12} /> CSVをアップロード
+              </button>
+            ) : (
+              <Link
+                to="/app/data-import/upload"
+                className="btn-primary px-3 py-1.5 text-xs"
+              >
+                <Upload size={12} /> CSVアップロードへ
+              </Link>
+            )}
             <Link
               to="/app/revenue-analysis"
               className="btn-secondary px-3 py-1.5 text-xs"
@@ -163,6 +214,8 @@ export default function DataImport() {
           メモリ／ブラウザ保存のみ。外部送信なし。
         </div>
 
+        {activeView === "overview" && (
+          <>
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <ChartFrame
             title="診断データ充足率"
@@ -198,7 +251,6 @@ export default function DataImport() {
         </div>
 
         {/* Connection-state guide — explain what's real CSV vs demo vs not-yet-connected */}
-        <div id="data-import-current" className="scroll-mt-24">
         <SectionCard
           title="現在の接続状態（デモで見せられる範囲）"
           icon={<Activity size={16} />}
@@ -252,10 +304,12 @@ export default function DataImport() {
             </div>
           </div>
         </SectionCard>
-        </div>
+          </>
+        )}
 
         {/* EC linkage stance — explain that we don't host the EC site */}
-        <div id="data-import-readiness" className="scroll-mt-24 space-y-5">
+        {activeView === "connections" && (
+        <div className="space-y-5">
         <SectionCard title="ECサイト連携の考え方" icon={<Plug size={16} />}>
           <div className="grid gap-3 lg:grid-cols-3">
             <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
@@ -372,9 +426,10 @@ export default function DataImport() {
           </div>
         </SectionCard>
         </div>
+        )}
 
         {/* Connection summary */}
-        <div id="data-import-summary" className="scroll-mt-24">
+        {(activeView === "overview" || activeView === "sources") && (
         <SectionCard title="データ接続サマリー" icon={<Database size={16} />}>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
             <SummaryItem
@@ -420,9 +475,11 @@ export default function DataImport() {
             />
           </div>
         </SectionCard>
-        </div>
+        )}
 
         {/* Failed import panel — shown when the most recent upload could not be applied */}
+        {activeView === "upload" && (
+          <>
         {lastFailure && (
           <SectionCard
             title="注文CSV 取込失敗"
@@ -1221,9 +1278,12 @@ export default function DataImport() {
             </div>
           </SectionCard>
         )}
+          </>
+        )}
 
         {/* Two cols: data source list / AI diagnosis influence */}
-        <div id="data-import-sources" className="scroll-mt-24">
+        {activeView === "sources" && (
+        <div>
         <div className="grid min-w-0 gap-5 lg:grid-cols-3">
           <SectionCard
             className="min-w-0 lg:col-span-2"
@@ -1358,9 +1418,11 @@ export default function DataImport() {
           </SectionCard>
         </div>
         </div>
+        )}
 
         {/* Upload + Flow + API */}
-        <div id="data-import-upload" className="scroll-mt-24">
+        {activeView === "upload" && (
+        <div>
         <div className="grid gap-5 lg:grid-cols-12">
           <SectionCard
             className="lg:col-span-5"
@@ -1710,11 +1772,99 @@ export default function DataImport() {
           </SectionCard>
         </div>
         </div>
+        )}
 
         {/* Bottom action bar */}
+        {activeView === "actions" && (
+          <>
+        <div className="grid gap-5 lg:grid-cols-3">
+          <SectionCard title="次に取り込むべきデータ" icon={<Sparkles size={16} />}>
+            <div className="space-y-3">
+              {[
+                {
+                  label: "レビューCSV",
+                  detail: "商品ページの信頼要素診断と訴求改善の精度を上げます。",
+                  tone: "gold" as const,
+                },
+                {
+                  label: "商品別粗利",
+                  detail: "売上だけでなく粗利ベースの優先度づけが可能になります。",
+                  tone: "mint" as const,
+                },
+                {
+                  label: "GA4 LP別CVR",
+                  detail: "流入品質とページ側の落ち込みを分けて判断できます。",
+                  tone: "slate" as const,
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-xl border border-slate-100 bg-slate-50/60 p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-semibold text-slate-800">
+                      {item.label}
+                    </div>
+                    <Pill tone={item.tone} size="xs">
+                      推奨
+                    </Pill>
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">
+                    {item.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard title="売上要因分析へ進む" icon={<Activity size={16} />}>
+            <p className="text-sm leading-6 text-slate-700">
+              取込済みCSVとサンプルデータを使って、売上変動を「客数・CVR・AOV・広告効率」に分けて確認します。
+            </p>
+            <Link
+              to="/app/revenue-analysis"
+              className="btn-success mt-4 w-full justify-center px-3 py-2 text-sm"
+            >
+              <Activity size={14} /> 売上要因分析へ進む
+            </Link>
+            <details className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs text-slate-600">
+              <summary className="cursor-pointer font-semibold text-slate-700">
+                反映されるデータ
+              </summary>
+              <p className="mt-2 leading-5">
+                注文CSVは売上・注文数・AOV、GA4 CSVはセッション・CVR、広告CSVはROAS / CPC / CVRに反映されます。
+              </p>
+            </details>
+          </SectionCard>
+
+          <SectionCard title="テンプレートとリセット" icon={<Download size={16} />}>
+            <div className="grid gap-2">
+              {[
+                ["注文CSVテンプレート", "/samples/orders_sample.csv", "orders_sample.csv"],
+                ["GA4 CSVテンプレート", "/samples/ga4_sample.csv", "ga4_sample.csv"],
+                ["広告CSVテンプレート", "/samples/ads_sample.csv", "ads_sample.csv"],
+              ].map(([label, href, file]) => (
+                <a
+                  key={href}
+                  href={href}
+                  download={file}
+                  className="btn-secondary justify-center px-3 py-2 text-sm"
+                >
+                  <Download size={14} /> {label}
+                </a>
+              ))}
+              <button
+                className="btn-secondary justify-center px-3 py-2 text-sm"
+                onClick={clearOrdersImport}
+              >
+                <Beaker size={14} /> サンプルデータに戻す
+              </button>
+            </div>
+          </SectionCard>
+        </div>
+
         <div
-          id="data-import-actions"
-          className="flex scroll-mt-24 flex-wrap items-center gap-2 rounded-xl bg-navy-950 px-4 py-3 text-white"
+          className="flex flex-wrap items-center gap-2 rounded-xl bg-navy-950 px-4 py-3 text-white"
         >
           <button
             className="btn px-3 py-1.5 text-sm bg-white/10 text-white hover:bg-white/20"
@@ -1749,6 +1899,8 @@ export default function DataImport() {
             <Download size={14} /> データテンプレートを取得
           </a>
         </div>
+          </>
+        )}
       </div>
     </>
   );

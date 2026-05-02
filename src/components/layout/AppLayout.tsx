@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import MobileNav from "./MobileNav";
@@ -10,17 +10,6 @@ export default function AppLayout() {
 
   // ルートが変わったらドロワーは閉じる
   const close = () => setOpen(false);
-
-  useEffect(() => {
-    if (!location.hash) return;
-    const id = decodeURIComponent(location.hash.slice(1));
-    window.requestAnimationFrame(() => {
-      document.getElementById(id)?.scrollIntoView({
-        block: "start",
-        behavior: "smooth",
-      });
-    });
-  }, [location.hash, location.pathname]);
 
   return (
     <MobileNavContext.Provider value={{ open, setOpen }}>
