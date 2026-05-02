@@ -596,6 +596,119 @@ export const monthlyStats = {
   monthlyGoal: { current: 6, target: 12, percent: 50 },
 };
 
+export type ChartDatum = {
+  label: string;
+  value: number;
+  compare?: number;
+};
+
+export type ChartSeries = {
+  name: string;
+  values: number[];
+};
+
+export type DistributionDatum = {
+  label: string;
+  value: number;
+};
+
+export const chartLabels = [
+  "4/1",
+  "4/4",
+  "4/7",
+  "4/10",
+  "4/13",
+  "4/16",
+  "4/19",
+  "4/22",
+  "4/25",
+  "4/28",
+  "4/30",
+];
+
+export const monthlyTrendSeries: ChartSeries[] = [
+  {
+    name: "売上",
+    values: [820, 910, 980, 1040, 1100, 1190, 1160, 1270, 1360, 1430, 1480],
+  },
+  {
+    name: "注文",
+    values: [620, 650, 690, 720, 760, 810, 840, 880, 910, 960, 1000],
+  },
+  {
+    name: "CVR",
+    values: [250, 260, 255, 270, 276, 282, 274, 286, 292, 288, 284],
+  },
+];
+
+export const monthlyComparisonBars: ChartDatum[] = [
+  { label: "売上", value: 1240, compare: 1085 },
+  { label: "注文", value: 328, compare: 304 },
+  { label: "AOV", value: 378, compare: 357 },
+  { label: "CVR", value: 284, compare: 314 },
+  { label: "ROAS", value: 312, compare: 380 },
+];
+
+export const channelBars: DistributionDatum[] = [
+  { label: "Google広告", value: 34 },
+  { label: "自然検索", value: 27 },
+  { label: "Instagram", value: 18 },
+  { label: "メール", value: 13 },
+  { label: "直接流入", value: 8 },
+];
+
+export const actionStatusDistribution: DistributionDatum[] = [
+  { label: "進行中", value: 5 },
+  { label: "レビュー中", value: 3 },
+  { label: "未着手", value: 4 },
+  { label: "実装済み", value: 6 },
+];
+
+export const actionOwnerLoad: DistributionDatum[] = [
+  { label: "EC担当", value: 5 },
+  { label: "広告担当", value: 4 },
+  { label: "制作担当", value: 4 },
+  { label: "分析担当", value: 3 },
+  { label: "CRM担当", value: 2 },
+];
+
+export const productFunnel: DistributionDatum[] = [
+  { label: "LP到達", value: 100 },
+  { label: "FV閲覧", value: 92 },
+  { label: "商品説明閲覧", value: 68 },
+  { label: "レビュー閲覧", value: 48 },
+  { label: "カート追加", value: 28 },
+  { label: "購入完了", value: 2 },
+];
+
+export const productCvrTrend: ChartSeries[] = [
+  { name: "今月CVR", values: [2.1, 2.0, 2.2, 2.4, 1.8, 2.1, 1.9, 2.2, 2.0, 1.7, 1.8] },
+  { name: "前月CVR", values: [2.9, 3.1, 3.2, 2.8, 3.0, 2.9, 2.8, 2.7, 2.6, 2.5, 2.4] },
+];
+
+export const reportImpactBars: DistributionDatum[] = [
+  { label: "商品ページCVR改善", value: 980 },
+  { label: "広告配分見直し", value: 720 },
+  { label: "CRMシナリオ追加", value: 420 },
+  { label: "レビュー導線改善", value: 310 },
+  { label: "低回転SKU整理", value: 210 },
+];
+
+export const dataCoverageBars: DistributionDatum[] = [
+  { label: "注文CSV", value: 92 },
+  { label: "GA4 CSV", value: 78 },
+  { label: "広告CSV", value: 64 },
+  { label: "BigQueryデモ", value: 25 },
+  { label: "実API連携", value: 0 },
+];
+
+export const aiImpactBars: DistributionDatum[] = [
+  { label: "商品A CVR低下", value: 124 },
+  { label: "広告ROAS悪化", value: 86 },
+  { label: "在庫滞留", value: 54 },
+  { label: "リピート横ばい", value: 28 },
+];
+
 // --- Revenue variance / driver decomposition ---
 // 売上 = セッション数 × CVR × AOV の構造で、前月との売上差分を要因に分解する。
 // GA4 / BigQuery の本接続前の段階で、CSVと前提値だけで「何が原因で売上が動いたか」を

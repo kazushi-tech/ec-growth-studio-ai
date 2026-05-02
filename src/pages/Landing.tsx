@@ -259,7 +259,7 @@ export default function Landing() {
                 <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-navy-900 text-white">
                   <s.icon size={16} />
                 </div>
-                <div className="mt-3 text-[11px] font-semibold tracking-wider text-emerald-600">
+                <div className="mt-3 text-xs font-semibold tracking-wider text-emerald-600">
                   STEP {s.no}
                 </div>
                 <div className="mt-1 text-sm font-semibold text-slate-900">
@@ -313,7 +313,7 @@ export default function Landing() {
                 注文CSVだけで月次AI診断・主要KPI・商品別判断を始められます。
                 Shopify / GA4 / 広告 API は任意で、後から段階的に拡張できます。
               </p>
-              <div className="mt-4 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+              <div className="mt-4 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
                 <span>連携:</span>
                 {apis.map((a) => (
                   <span
@@ -343,7 +343,7 @@ export default function Landing() {
                     <div className="mt-2 text-xs font-semibold text-slate-900">
                       {f.t}
                     </div>
-                    <p className="mt-0.5 text-[11px] leading-5 text-slate-500">
+                    <p className="mt-0.5 text-xs leading-5 text-slate-500">
                       {f.d}
                     </p>
                   </div>
@@ -516,7 +516,7 @@ export default function Landing() {
                     送信する
                     <ArrowRight size={16} />
                   </button>
-                  <p className="mt-2 text-[11px] text-slate-400">
+                  <p className="mt-2 text-xs text-slate-400">
                     送信内容は問い合わせ目的のみに使用します。
                   </p>
                 </div>
@@ -525,7 +525,7 @@ export default function Landing() {
           </div>
         </div>
         <div className="border-t border-white/10">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 text-[11px] text-navy-300 sm:px-6">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 text-xs text-navy-300 sm:px-6">
             <div>© 2026 EC Growth Studio AI</div>
             <div className="flex flex-wrap gap-3">
               <a href="#features" className="hover:text-white">
@@ -595,7 +595,7 @@ function HeroMock() {
   return (
     <div className="relative">
       <div className="card overflow-hidden !rounded-xl">
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2 text-[11px] text-slate-500">
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs text-slate-500">
           <div className="flex gap-1.5">
             <span className="h-2 w-2 rounded-full bg-rose-300" />
             <span className="h-2 w-2 rounded-full bg-amber-300" />
@@ -611,10 +611,10 @@ function HeroMock() {
             { l: "リピート率", v: "28.6%", d: "+2.1pt", up: true },
           ].map((k) => (
             <div key={k.l} className="rounded-md border border-slate-100 p-3">
-              <div className="text-[11px] text-slate-500">{k.l}</div>
+              <div className="text-xs text-slate-500">{k.l}</div>
               <div className="mt-1 text-lg font-bold text-slate-900">{k.v}</div>
               <div
-                className={`text-[11px] font-semibold ${
+                className={`text-xs font-semibold ${
                   k.up ? "text-emerald-600" : "text-rose-600"
                 }`}
               >
@@ -623,7 +623,7 @@ function HeroMock() {
             </div>
           ))}
         </div>
-        <div className="space-y-2 border-t border-slate-100 px-4 py-3 text-[11px]">
+        <div className="space-y-2 border-t border-slate-100 px-4 py-3 text-xs">
           <div className="font-semibold text-slate-700">優先アクションTOP5</div>
           {[
             ["商品AのFV改善", "P1", "5/3"],
@@ -635,7 +635,7 @@ function HeroMock() {
               className="flex items-center justify-between rounded-md bg-slate-50 px-2.5 py-1.5"
             >
               <span className="text-slate-700">{t}</span>
-              <span className="flex items-center gap-2 text-[11px] text-slate-500">
+              <span className="flex items-center gap-2 text-xs text-slate-500">
                 <span className="rounded bg-rose-100 px-1.5 py-0.5 font-semibold text-rose-700">
                   {p}
                 </span>

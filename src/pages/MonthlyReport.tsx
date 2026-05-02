@@ -20,19 +20,31 @@ import {
   ShieldCheck,
   TrendingUp,
   TrendingDown,
+  ChevronDown,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import SectionCard from "../components/ui/SectionCard";
+import {
+  BarChart,
+  ChartFrame,
+  HorizontalBarChart,
+  LineChart,
+  chartPalette,
+} from "../components/ui/Charts";
 import Pill, {
   impactTone,
   statusTone,
 } from "../components/ui/Pill";
 import {
   actions,
+  chartLabels,
   dataSources,
   insights,
   kpis,
+  monthlyComparisonBars,
   monthlyStats,
+  monthlyTrendSeries,
+  reportImpactBars,
   reportSections,
 } from "../data/sample";
 import type { DataSource } from "../data/sample";
@@ -92,7 +104,7 @@ export default function MonthlyReport() {
         <article className="rounded-2xl border border-slate-200 bg-white shadow-card">
           {/* Cover */}
           <header className="border-b border-slate-100 px-8 pt-8 pb-6">
-            <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-500">
+            <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-500">
               <span>Monthly EC Growth Report</span>
               <span className="text-slate-300">|</span>
               <span>Prepared by EC Growth Studio Team</span>
@@ -124,6 +136,60 @@ export default function MonthlyReport() {
               </Pill>
             </div>
           </header>
+
+          <section className="border-b border-slate-100 px-8 py-6">
+            <SectionTitle
+              icon={<TrendingUp size={14} />}
+              eyebrow="01 / Performance"
+              title="月次パフォーマンス"
+            />
+            <div className="mt-4 grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+              <ChartFrame
+                title="売上・注文・CVR 推移"
+                subtitle="レポート冒頭で、今月の流れを大きなグラフで確認。"
+                legend={[
+                  { label: "売上", color: chartPalette.navy },
+                  { label: "注文", color: chartPalette.sky },
+                  { label: "CVR", color: chartPalette.slate },
+                ]}
+              >
+                <LineChart
+                  ariaLabel="月次レポートの売上、注文、CVR推移"
+                  labels={chartLabels}
+                  series={[
+                    { ...monthlyTrendSeries[0], color: chartPalette.navy },
+                    { ...monthlyTrendSeries[1], color: chartPalette.sky },
+                    { ...monthlyTrendSeries[2], color: chartPalette.slate },
+                  ]}
+                />
+              </ChartFrame>
+              <ChartFrame
+                title="KPI 前月比較"
+                subtitle="濃色が今月、薄色が前月。"
+              >
+                <BarChart
+                  ariaLabel="月次レポートのKPI前月比較"
+                  data={monthlyComparisonBars}
+                  height={220}
+                />
+              </ChartFrame>
+            </div>
+            <div className="mt-5">
+              <ChartFrame
+                title="来月重点施策の期待インパクト"
+                subtitle="文章の前に、優先順位を横棒で確認できます。"
+              >
+                <HorizontalBarChart
+                  ariaLabel="来月重点施策の期待インパクト"
+                  data={reportImpactBars.map((d, i) => ({
+                    ...d,
+                    color: i === 0 ? chartPalette.navy : chartPalette.slate,
+                  }))}
+                  unit="千円"
+                />
+              </ChartFrame>
+            </div>
+          </section>
 
           {/* Executive summary */}
           <section className="border-b border-slate-100 px-8 py-6">
@@ -178,7 +244,7 @@ export default function MonthlyReport() {
                 <ReportKpi key={k.key} label={k.label} value={k.value} delta={k.delta} intent={k.intent} />
               ))}
             </div>
-            <p className="mt-3 text-[11px] text-slate-500">
+            <p className="mt-3 text-xs text-slate-500">
               ※ 売上 / 注文数 / AOV は注文CSV由来の <b>実値</b>、CVR / リピート / ROAS は
               GA4・広告CSV取込状況に応じて切替。前月数値は静的サンプル（推定）。
             </p>
@@ -191,8 +257,8 @@ export default function MonthlyReport() {
               eyebrow="03 / Issues"
               title="今月の課題（領域別）"
             />
-            <div className="mt-4 overflow-hidden rounded-xl border border-slate-100">
-              <table className="table-clean">
+            <div className="mt-4 overflow-x-auto rounded-xl border border-slate-100">
+              <table className="table-clean min-w-[48rem]">
                 <thead>
                   <tr>
                     <th>領域</th>
@@ -232,8 +298,8 @@ export default function MonthlyReport() {
               eyebrow="04 / Next Month"
               title="来月の重点施策（P1）"
             />
-            <div className="mt-4 overflow-hidden rounded-xl border border-slate-100">
-              <table className="table-clean">
+            <div className="mt-4 overflow-x-auto rounded-xl border border-slate-100">
+              <table className="table-clean min-w-[48rem]">
                 <thead>
                   <tr>
                     <th>施策</th>
@@ -249,7 +315,7 @@ export default function MonthlyReport() {
                     <tr key={a.id}>
                       <td>
                         <div className="font-medium text-slate-800">{a.title}</div>
-                        <div className="mt-0.5 text-[11px] text-slate-500">
+                        <div className="mt-0.5 text-xs text-slate-500">
                           {a.rationale}
                         </div>
                       </td>
@@ -267,7 +333,7 @@ export default function MonthlyReport() {
                 </tbody>
               </table>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3 text-[11px] text-slate-500 md:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-slate-500 md:grid-cols-4">
               <FootStat label="今月の施策数" value={`${monthlyStats.totalActions}件`} />
               <FootStat label="完了" value={`${monthlyStats.done}件`} />
               <FootStat label="進行中" value={`${monthlyStats.inProgress}件`} />
@@ -295,10 +361,10 @@ export default function MonthlyReport() {
                     <div className="text-sm font-medium text-slate-800">
                       {d.name}
                     </div>
-                    <div className="mt-0.5 text-[11px] text-slate-500">
+                    <div className="mt-0.5 text-xs text-slate-500">
                       {d.method} ・ {d.updated} ・ {d.count}
                     </div>
-                    <div className="mt-1 text-[11px] text-slate-500">
+                    <div className="mt-1 text-xs text-slate-500">
                       {d.impact}
                     </div>
                   </div>
@@ -317,7 +383,7 @@ export default function MonthlyReport() {
               eyebrow="06 / Notes"
               title="未接続範囲・デモデータ注記"
             />
-            <ul className="mt-3 space-y-2 text-[12px] leading-6 text-slate-600">
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
               <li className="flex items-start gap-2">
                 <ShieldCheck size={14} className="mt-0.5 shrink-0 text-slate-400" />
                 数値の出所:{" "}
@@ -387,27 +453,15 @@ export default function MonthlyReport() {
           >
             <ol className="space-y-2">
               {reportSections.map((s) => (
-                <li
+                <ReportSectionItem
                   key={s.id}
-                  className="rounded-xl border border-slate-100 bg-slate-50/50 p-2.5"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="text-[11px] font-semibold text-slate-500">
-                      {s.no}
-                    </div>
-                  </div>
-                  <div className="mt-0.5 text-sm font-semibold text-slate-800">
-                    {s.title}
-                  </div>
-                  <div className="mt-1.5">
-                    <Pill tone={reportStatusTone(s.status)} size="xs">
-                      {s.status}
-                    </Pill>
-                  </div>
-                </li>
+                  no={s.no}
+                  title={s.title}
+                  status={s.status}
+                />
               ))}
               <li>
-                <button className="w-full rounded-xl border border-dashed border-slate-300 px-2 py-2 text-[11px] text-slate-500 hover:bg-slate-50">
+                <button className="w-full rounded-xl border border-dashed border-slate-300 px-2 py-2 text-xs text-slate-500 hover:bg-slate-50">
                   <Plus size={11} className="mr-1 inline" /> セクションを追加
                 </button>
               </li>
@@ -419,48 +473,58 @@ export default function MonthlyReport() {
             title="編集・確認ステータス"
             icon={<RefreshCw size={16} />}
           >
-            <Step
-              dotColor="bg-emerald-500"
-              title="AI生成済み"
-              sub={`AIがレポートを生成 / 2026/04/29 09:10`}
-              icon={<Sparkles size={14} />}
-              completed
-            />
-            <StepArrow />
-            <Step
-              dotColor="bg-amber-500"
-              title="担当者レビュー中"
-              sub="Growth Team が内容を確認中"
-              icon={<Users size={14} />}
-            />
-            <StepArrow />
-            <Step
-              dotColor="bg-sky-500"
-              title="顧客提出可"
-              sub="社内承認後に提出可能"
-              icon={<CheckCircle2 size={14} />}
-              hint
-            />
-            <div className="mt-2 space-y-1.5">
-              <Pill tone="rose">
-                <AlertTriangle size={11} /> 要確認
-              </Pill>
-              <div />
-              <Pill tone="rose">
-                <AlertTriangle size={11} /> データ不足
-              </Pill>
-              <div />
-              <Pill tone="rose">
-                <AlertTriangle size={11} /> 表現リスク確認
-              </Pill>
+            <div className="space-y-2">
+              <DisclosurePanel
+                title="現在の進行状況"
+                status="レビュー中"
+                tone="gold"
+                defaultOpen
+              >
+                <Step
+                  dotColor="bg-emerald-500"
+                  title="AI生成済み"
+                  sub={`AIがレポートを生成 / 2026/04/29 09:10`}
+                  icon={<Sparkles size={14} />}
+                  completed
+                />
+                <StepArrow />
+                <Step
+                  dotColor="bg-amber-500"
+                  title="担当者レビュー中"
+                  sub="Growth Team が内容を確認中"
+                  icon={<Users size={14} />}
+                />
+                <StepArrow />
+                <Step
+                  dotColor="bg-sky-500"
+                  title="顧客提出可"
+                  sub="社内承認後に提出可能"
+                  icon={<CheckCircle2 size={14} />}
+                  hint
+                />
+              </DisclosurePanel>
+              <DisclosurePanel title="要確認ポイント" status="3件" tone="rose">
+                <div className="flex flex-wrap gap-1.5">
+                  <Pill tone="rose">
+                    <AlertTriangle size={11} /> 要確認
+                  </Pill>
+                  <Pill tone="rose">
+                    <AlertTriangle size={11} /> データ不足
+                  </Pill>
+                  <Pill tone="rose">
+                    <AlertTriangle size={11} /> 表現リスク確認
+                  </Pill>
+                </div>
+              </DisclosurePanel>
+              <DisclosurePanel title="提出ステップ" status="未提出" tone="slate">
+                <Step
+                  dotColor="bg-slate-500"
+                  title="顧客提出"
+                  sub="クライアントに共有・提出"
+                  icon={<Presentation size={14} />}
+                />
+              </DisclosurePanel>
             </div>
-            <StepArrow />
-            <Step
-              dotColor="bg-violet-500"
-              title="顧客提出"
-              sub="クライアントに共有・提出"
-              icon={<Presentation size={14} />}
-            />
           </SectionCard>
 
           <SectionCard
@@ -468,18 +532,26 @@ export default function MonthlyReport() {
             title="出力形式"
             icon={<Download size={16} />}
             action={
-              <span className="text-[11px] text-slate-400">
+              <span className="text-xs text-slate-400">
                 <Maximize2 size={11} className="inline" /> Phase 4 予定
               </span>
             }
           >
-            <div className="grid grid-cols-2 gap-2">
-              <FormatCard label="PDF" tone="primary" />
-              <FormatCard label="PowerPoint" />
-              <FormatCard label="Google Slides" />
-              <FormatCard label="共有リンク" />
-              <FormatCard label="Notion連携" muted="近日対応" />
-              <FormatCard label="Google Docs連携" muted="近日対応" />
+            <div className="space-y-2">
+              <DisclosurePanel title="確認用出力" status="4形式" tone="navy" defaultOpen>
+                <div className="grid grid-cols-2 gap-2">
+                  <FormatCard label="PDF" tone="primary" />
+                  <FormatCard label="PowerPoint" />
+                  <FormatCard label="Google Slides" />
+                  <FormatCard label="共有リンク" />
+                </div>
+              </DisclosurePanel>
+              <DisclosurePanel title="将来連携" status="2形式" tone="slate">
+                <div className="grid grid-cols-2 gap-2">
+                  <FormatCard label="Notion連携" muted="近日対応" />
+                  <FormatCard label="Google Docs連携" muted="近日対応" />
+                </div>
+              </DisclosurePanel>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <button className="btn-primary px-3 py-2 text-xs">
@@ -489,7 +561,7 @@ export default function MonthlyReport() {
                 PowerPointで出力
               </button>
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">
+            <p className="mt-2 text-xs text-slate-400">
               ※ 自動出力は Phase 4 で実装予定。現状は UI 上のレイアウトを担当者が確認する用途。
             </p>
           </SectionCard>
@@ -499,29 +571,37 @@ export default function MonthlyReport() {
             title="顧客提出前チェック"
             icon={<CheckCircle2 size={16} />}
           >
-            <CheckRow icon="ok" label="数値確認" status="完了" tone="mint" />
-            <CheckRow icon="ok" label="表現チェック" status="完了" tone="mint" />
-            <CheckRow
-              icon="warn"
-              label="薬機法/景表法などの注意"
-              status="要確認"
-              tone="gold"
-              detail="効果効能の断定表現を確認してください"
-            />
-            <CheckRow
-              icon="warn"
-              label="データ不足の注記"
-              status="要確認"
-              tone="gold"
-              detail="商品別粗利未入力のため利益評価は注記が必要"
-            />
-            <CheckRow icon="todo" label="担当者承認" status="未完了" tone="slate" />
-            <CheckRow
-              icon="todo"
-              label="顧客向けコメント確認"
-              status="未完了"
-              tone="slate"
-            />
+            <div className="space-y-2">
+              <DisclosurePanel title="完了済み" status="2件" tone="mint" defaultOpen>
+                <CheckRow icon="ok" label="数値確認" status="完了" tone="mint" />
+                <CheckRow icon="ok" label="表現チェック" status="完了" tone="mint" />
+              </DisclosurePanel>
+              <DisclosurePanel title="確認が必要" status="2件" tone="gold">
+                <CheckRow
+                  icon="warn"
+                  label="薬機法/景表法などの注意"
+                  status="要確認"
+                  tone="gold"
+                  detail="効果効能の断定表現を確認してください"
+                />
+                <CheckRow
+                  icon="warn"
+                  label="データ不足の注記"
+                  status="要確認"
+                  tone="gold"
+                  detail="商品別粗利未入力のため利益評価は注記が必要"
+                />
+              </DisclosurePanel>
+              <DisclosurePanel title="未完了" status="2件" tone="slate">
+                <CheckRow icon="todo" label="担当者承認" status="未完了" tone="slate" />
+                <CheckRow
+                  icon="todo"
+                  label="顧客向けコメント確認"
+                  status="未完了"
+                  tone="slate"
+                />
+              </DisclosurePanel>
+            </div>
           </SectionCard>
         </div>
 
@@ -546,7 +626,7 @@ export default function MonthlyReport() {
               次月アクションを作成
             </button>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-[11px] text-slate-500 md:grid-cols-4">
+          <div className="mt-3 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-xs text-slate-500 md:grid-cols-4">
             <div>
               <div className="text-slate-400">次回報告会</div>
               <div className="text-slate-700">5月7日 10:00</div>
@@ -566,11 +646,88 @@ export default function MonthlyReport() {
           </div>
         </SectionCard>
 
-        <p className="text-center text-[11px] text-slate-400">
+        <p className="text-center text-xs text-slate-400">
           ※ 数値や表現は自動生成されています。提出前に必ず内容をご確認ください。
         </p>
       </div>
     </>
+  );
+}
+
+function ReportSectionItem({
+  no,
+  title,
+  status,
+}: {
+  no: string;
+  title: string;
+  status: string;
+}) {
+  return (
+    <li>
+      <details className="group rounded-xl border border-slate-100 bg-slate-50/50 p-2.5">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+          <span className="min-w-0">
+            <span className="block text-xs font-semibold text-slate-500">
+              {no}
+            </span>
+            <span className="mt-0.5 block truncate text-sm font-semibold text-slate-800">
+              {title}
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5">
+            <Pill tone={reportStatusTone(status)} size="xs">
+              {status}
+            </Pill>
+            <ChevronDown
+              size={14}
+              className="text-slate-400 transition-transform group-open:rotate-180"
+              aria-hidden="true"
+            />
+          </span>
+        </summary>
+        <div className="mt-2 border-t border-slate-200 pt-2 text-sm leading-6 text-slate-600">
+          この章の本文・数値・注記を確認します。初期表示では章名と状態だけを見せ、
+          詳細は必要なときだけ開きます。
+        </div>
+      </details>
+    </li>
+  );
+}
+
+function DisclosurePanel({
+  title,
+  status,
+  tone,
+  children,
+  defaultOpen,
+}: {
+  title: string;
+  status: string;
+  tone: "mint" | "gold" | "rose" | "slate" | "navy";
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details
+      className="group rounded-xl border border-slate-100 bg-white p-3"
+      open={defaultOpen}
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+        <span className="text-sm font-semibold text-slate-800">{title}</span>
+        <span className="flex items-center gap-1.5">
+          <Pill tone={tone} size="xs">
+            {status}
+          </Pill>
+          <ChevronDown
+            size={14}
+            className="text-slate-400 transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          />
+        </span>
+      </summary>
+      <div className="mt-3 border-t border-slate-100 pt-3">{children}</div>
+    </details>
   );
 }
 
@@ -585,7 +742,7 @@ function CoverMeta({
 }) {
   return (
     <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
-      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-500">
+      <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-slate-500">
         <span className="text-slate-400">{icon}</span>
         {label}
       </div>
@@ -605,7 +762,7 @@ function SectionTitle({
 }) {
   return (
     <div>
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+      <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
         {icon && <span className="text-slate-400">{icon}</span>}
         {eyebrow}
       </div>
@@ -643,7 +800,7 @@ function ExecCallout({
         <span className={`h-2 w-2 rounded-full ${dotClass}`} />
         {title}
       </div>
-      <ul className="mt-2 space-y-1 text-[12px] text-slate-700">
+      <ul className="mt-2 space-y-1 text-sm text-slate-700">
         {items.map((it) => (
           <li key={it} className="leading-5">
             ・{it}
@@ -679,9 +836,9 @@ function ReportKpi({
         : "text-slate-500";
   return (
     <div className="rounded-xl border border-slate-100 bg-white p-3">
-      <div className="text-[11px] font-medium text-slate-500">{label}</div>
+      <div className="text-xs font-medium text-slate-500">{label}</div>
       <div className="mt-1 text-lg font-semibold text-slate-900">{value}</div>
-      <div className={`mt-0.5 flex items-center gap-1 text-[11px] font-semibold ${color}`}>
+      <div className={`mt-0.5 flex items-center gap-1 text-xs font-semibold ${color}`}>
         <Icon size={12} />
         {delta}
       </div>
@@ -732,7 +889,7 @@ function SummaryItem({
         : "text-slate-900";
   return (
     <div className="rounded-xl border border-slate-100 bg-white p-3">
-      <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+      <div className="flex items-center gap-1.5 text-xs text-slate-500">
         <span className="text-slate-400">{icon}</span>
         {label}
       </div>
@@ -747,7 +904,7 @@ function DonutItem({ percent, label }: { percent: number; label: string }) {
   const off = c * (1 - percent / 100);
   return (
     <div className="rounded-xl border border-slate-100 bg-white p-3">
-      <div className="text-[11px] text-slate-500">{label}</div>
+      <div className="text-xs text-slate-500">{label}</div>
       <div className="mt-1 flex items-center gap-2">
         <svg
           width="48"
@@ -816,7 +973,7 @@ function Step({
           </Pill>
         )}
       </div>
-      {sub && <p className="mt-1 text-[11px] text-slate-500">{sub}</p>}
+      {sub && <p className="mt-1 text-xs text-slate-500">{sub}</p>}
     </div>
   );
 }
@@ -848,7 +1005,7 @@ function FormatCard({
     >
       <div className="text-xs font-semibold">{label}</div>
       {muted && (
-        <div className="mt-0.5 text-[11px] text-slate-400">{muted}</div>
+        <div className="mt-0.5 text-xs text-slate-400">{muted}</div>
       )}
     </div>
   );
@@ -882,7 +1039,7 @@ function CheckRow({
         <div>
           <div className="text-xs font-medium text-slate-800">{label}</div>
           {detail && (
-            <div className="text-[11px] text-slate-500">{detail}</div>
+            <div className="text-xs text-slate-500">{detail}</div>
           )}
         </div>
       </div>

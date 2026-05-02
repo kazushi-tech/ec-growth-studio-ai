@@ -11,14 +11,14 @@ type Tone =
   | "emerald";
 
 const toneClass: Record<Tone, string> = {
-  mint: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-  rose: "bg-rose-50 text-rose-700 ring-rose-100",
-  gold: "bg-amber-50 text-amber-700 ring-amber-100",
-  sky: "bg-sky-50 text-sky-700 ring-sky-100",
+  mint: "bg-white text-slate-700 ring-slate-200",
+  rose: "bg-white text-rose-700 ring-rose-200",
+  gold: "bg-white text-amber-700 ring-amber-200",
+  sky: "bg-white text-sky-700 ring-sky-200",
   slate: "bg-slate-100 text-slate-700 ring-slate-200",
-  violet: "bg-violet-50 text-violet-700 ring-violet-100",
+  violet: "bg-white text-slate-700 ring-slate-200",
   navy: "bg-navy-900 text-white ring-navy-900",
-  emerald: "bg-emerald-600 text-white ring-emerald-700",
+  emerald: "bg-navy-900 text-white ring-navy-900",
 };
 
 export default function Pill({
@@ -32,8 +32,8 @@ export default function Pill({
 }) {
   const sizing =
     size === "xs"
-      ? "px-2 py-0.5 text-[11px]"
-      : "px-2.5 py-0.5 text-[11px]";
+      ? "px-2 py-0.5 text-xs"
+      : "px-2.5 py-0.5 text-sm";
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full font-medium ring-1 ${sizing} ${toneClass[tone]}`}
