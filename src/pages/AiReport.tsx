@@ -14,9 +14,16 @@ import {
   CheckCircle2,
   ArrowRight,
   AlertCircle,
+  ChevronDown,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import SectionCard from "../components/ui/SectionCard";
+import {
+  ChartFrame,
+  HorizontalBarChart,
+  LineChart,
+  chartPalette,
+} from "../components/ui/Charts";
 import Pill, {
   effortTone,
   impactTone,
@@ -25,7 +32,14 @@ import Pill, {
 } from "../components/ui/Pill";
 import Sparkline from "../components/ui/Sparkline";
 import { Link } from "react-router-dom";
-import { actions, insights, kpis } from "../data/sample";
+import {
+  actions,
+  aiImpactBars,
+  chartLabels,
+  insights,
+  kpis,
+  monthlyTrendSeries,
+} from "../data/sample";
 
 const aiActions = actions.slice(0, 5);
 
@@ -49,7 +63,7 @@ export default function AiReport() {
 
       <div className="space-y-5 px-6 py-5">
         {/* Sample-text disclaimer — make it explicit that AI text on this page is sample copy */}
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-2.5 text-[12px] text-amber-900">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-2.5 text-sm text-amber-900">
           <AlertCircle size={14} className="text-amber-600" />
           <span className="font-semibold">この画面のAI考察はサンプル文言です。</span>
           <span className="text-amber-800/90">
@@ -57,6 +71,46 @@ export default function AiReport() {
             実AI生成は <b>Phase 4 で Anthropic SDK + prompt cache</b> に接続予定。
             数値はサンプルデータ、文言は固定の参考文です。
           </span>
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+          <ChartFrame
+            title="AI診断の数値根拠"
+            subtitle="サンプル文言の前に、売上・注文・CVRの推移を確認します。"
+            legend={[
+              { label: "売上", color: chartPalette.navy },
+              { label: "注文", color: chartPalette.sky },
+              { label: "CVR", color: chartPalette.slate },
+            ]}
+          >
+            <LineChart
+              ariaLabel="AI診断の根拠となる売上、注文、CVR推移"
+              labels={chartLabels}
+              series={[
+                { ...monthlyTrendSeries[0], color: chartPalette.navy },
+                { ...monthlyTrendSeries[1], color: chartPalette.sky },
+                { ...monthlyTrendSeries[2], color: chartPalette.slate },
+              ]}
+            />
+          </ChartFrame>
+          <ChartFrame
+            title="検出シグナル"
+            subtitle="異常・機会を影響額順に並べる。"
+          >
+            <HorizontalBarChart
+              ariaLabel="AI診断で検出したシグナルの影響額"
+              data={aiImpactBars.map((d, i) => ({
+                ...d,
+                color:
+                  i === 0
+                    ? chartPalette.rose
+                    : i === 1
+                      ? chartPalette.amber
+                      : chartPalette.slate,
+              }))}
+              unit="万円"
+            />
+          </ChartFrame>
         </div>
 
         {/* Top: AI diagnosis + Numerical evidence */}
@@ -91,13 +145,13 @@ export default function AiReport() {
                 <div className="text-xs font-semibold text-slate-500">
                   売上への影響
                 </div>
-                <div className="mt-2 text-[11px] text-slate-500">
+                <div className="mt-2 text-xs text-slate-500">
                   推定機会損失
                 </div>
                 <div className="text-2xl font-bold text-slate-900">
                   ¥1,240,000
                 </div>
-                <div className="mt-2 text-[11px] text-slate-500">改善余地</div>
+                <div className="mt-2 text-xs text-slate-500">改善余地</div>
                 <div className="text-base font-semibold text-emerald-600">
                   +8〜12%
                 </div>
@@ -109,12 +163,12 @@ export default function AiReport() {
             <div className="grid grid-cols-2 gap-3">
               {kpis.slice(0, 6).map((k) => (
                 <div key={k.key} className="rounded-lg border border-slate-100 p-2.5">
-                  <div className="text-[11px] text-slate-500">{k.label}</div>
+                  <div className="text-xs text-slate-500">{k.label}</div>
                   <div className="text-sm font-bold text-slate-900">
                     {k.value}
                   </div>
                   <div
-                    className={`text-[11px] font-semibold ${
+                    className={`text-xs font-semibold ${
                       k.intent === "negative"
                         ? "text-rose-600"
                         : k.intent === "positive"
@@ -160,9 +214,9 @@ export default function AiReport() {
         </SectionCard>
 
         {/* Two cols: AI proposals + side info */}
-        <div className="grid gap-5 lg:grid-cols-3">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-3">
           <SectionCard
-            className="lg:col-span-2"
+            className="min-w-0 lg:col-span-2"
             title="AI改善提案"
             icon={<ListChecks size={16} />}
             action={
@@ -173,9 +227,9 @@ export default function AiReport() {
                 すべての施策を施策ボードで管理する →
               </Link>
             }
-            bodyClassName="!px-2 !py-2"
+            bodyClassName="!px-2 !py-2 overflow-x-auto"
           >
-            <table className="table-clean">
+            <table className="table-clean min-w-[48rem]">
               <thead>
                 <tr>
                   <th className="!w-8">#</th>
@@ -241,7 +295,7 @@ export default function AiReport() {
                   <Megaphone size={14} /> 広告改善案を作成
                 </button>
               </div>
-              <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
+              <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
                 <div className="flex items-center gap-2">
                   <CalendarClock size={12} /> 次回改善会議: 5月7日 10:00
                 </div>
@@ -277,7 +331,7 @@ export default function AiReport() {
                   "広告配分変更による学習リセット",
                 ]}
               />
-              <div className="mt-3 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
+              <div className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
                 <div className="flex items-center gap-2 font-medium text-slate-700">
                   <Database size={12} /> 次に必要な追加データ
                 </div>
@@ -337,7 +391,7 @@ function IssueCard({ item }: { item: (typeof insights)[number] }) {
         <Pill tone={meta.tone}>{item.state}</Pill>
       </div>
       <p className="mt-2 text-xs leading-6 text-slate-600">{item.summary}</p>
-      <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px]">
+      <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-xs">
         <span className="text-slate-500">
           売上影響:{" "}
           <span
@@ -373,20 +427,30 @@ function CheckRow({
     rose: "text-rose-600",
   };
   return (
-    <div className="mt-2">
-      <div
-        className={`flex items-center gap-2 text-xs font-semibold ${colorMap[tone]}`}
+    <details className="group mt-2 rounded-lg border border-slate-100 bg-white px-3 py-2">
+      <summary
+        className={`flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold ${colorMap[tone]}`}
       >
-        <span className="h-1.5 w-1.5 rounded-full bg-current" />
-        {title}
-      </div>
-      <ul className="mt-1.5 space-y-0.5 pl-3.5 text-[11px] text-slate-600">
+        <span className="inline-flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+          {title}
+        </span>
+        <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+          {items.length}件
+          <ChevronDown
+            size={14}
+            className="transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          />
+        </span>
+      </summary>
+      <ul className="mt-2 space-y-0.5 border-t border-slate-100 pt-2 pl-3.5 text-xs text-slate-600">
         {items.map((it) => (
           <li key={it} className="list-disc">
             {it}
           </li>
         ))}
       </ul>
-    </div>
+    </details>
   );
 }

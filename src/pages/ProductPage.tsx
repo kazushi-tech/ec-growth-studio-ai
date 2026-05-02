@@ -18,13 +18,25 @@ import {
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import SectionCard from "../components/ui/SectionCard";
+import {
+  ChartFrame,
+  HorizontalBarChart,
+  LineChart,
+  chartPalette,
+} from "../components/ui/Charts";
 import Pill, {
   effortTone,
   impactTone,
   priorityTone,
 } from "../components/ui/Pill";
 import ScoreBar from "../components/ui/ScoreBar";
-import { productPageActions, productPageDiagnosis } from "../data/sample";
+import {
+  chartLabels,
+  productCvrTrend,
+  productFunnel,
+  productPageActions,
+  productPageDiagnosis,
+} from "../data/sample";
 
 const diagnosisIcon = [
   ImageIcon, // FV
@@ -61,18 +73,19 @@ export default function ProductPage() {
           <div className="grid gap-5 lg:grid-cols-12">
             <div className="lg:col-span-4">
               <div className="flex gap-4">
-                <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-emerald-100 via-emerald-50 to-white text-3xl">
-                  🌿
+                <div className="flex h-28 w-28 shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-slate-600">
+                  <span className="text-xs font-semibold">SKU</span>
+                  <span className="mt-1 text-lg font-bold text-slate-900">A</span>
                 </div>
                 <div>
-                  <div className="text-[11px] text-slate-500">SKU-HAIR-001</div>
+                  <div className="text-xs text-slate-500">SKU-HAIR-001</div>
                   <h3 className="text-lg font-semibold text-slate-900">
                     薬用スカルプエッセンス A
                   </h3>
                   <div className="mt-0.5 text-xs text-slate-500">
                     カテゴリ: ヘアケア
                   </div>
-                  <div className="mt-3 rounded-lg border border-sky-100 bg-sky-50 p-2.5 text-[11px] leading-6 text-slate-700">
+                  <div className="mt-3 rounded-lg border border-sky-100 bg-sky-50 p-2.5 text-xs leading-6 text-slate-700">
                     <b className="text-sky-700">AIメモ:</b>{" "}
                     主力商品だがCVR低下と広告効率悪化が同時発生。
                     商品ページ改善を最優先で実行。
@@ -93,13 +106,13 @@ export default function ProductPage() {
                   key={s.l}
                   className="rounded-xl border border-slate-100 bg-white p-3"
                 >
-                  <div className="text-[11px] text-slate-500">{s.l}</div>
+                  <div className="text-xs text-slate-500">{s.l}</div>
                   <div className="mt-1 text-lg font-bold text-slate-900">
                     {s.v}
                   </div>
                   {s.d && (
                     <div
-                      className={`mt-0.5 text-[11px] font-semibold ${
+                      className={`mt-0.5 text-xs font-semibold ${
                         s.neg ? "text-rose-600" : "text-emerald-600"
                       }`}
                     >
@@ -117,6 +130,40 @@ export default function ProductPage() {
             </div>
           </div>
         </SectionCard>
+
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+          <ChartFrame
+            title="CVR推移 Before / After"
+            subtitle="商品ページ改善の主指標。今月CVRと前月CVRを同じ尺度で比較します。"
+            legend={[
+              { label: "今月CVR", color: chartPalette.navy },
+              { label: "前月CVR", color: chartPalette.sky },
+            ]}
+          >
+            <LineChart
+              ariaLabel="商品ページCVRの今月と前月の推移"
+              labels={chartLabels}
+              series={[
+                { ...productCvrTrend[0], color: chartPalette.navy },
+                { ...productCvrTrend[1], color: chartPalette.sky },
+              ]}
+              unit="%"
+            />
+          </ChartFrame>
+          <ChartFrame
+            title="商品ページファネル"
+            subtitle="どこで落ちているかを横棒で確認。"
+          >
+            <HorizontalBarChart
+              ariaLabel="商品ページファネル"
+              data={productFunnel.map((d, i) => ({
+                ...d,
+                color: i < 3 ? chartPalette.navy : chartPalette.slate,
+              }))}
+              unit="%"
+            />
+          </ChartFrame>
+        </div>
 
         {/* Diagnosis grid + Before/After */}
         <div className="grid gap-5 lg:grid-cols-12">
@@ -159,7 +206,7 @@ export default function ProductPage() {
                       <div className="mb-1 text-xs text-slate-400">/100</div>
                     </div>
                     <ScoreBar score={d.score} />
-                    <p className="mt-2 text-[11px] leading-5 text-slate-500">
+                    <p className="mt-2 text-xs leading-5 text-slate-500">
                       {d.note}
                     </p>
                   </div>
@@ -178,7 +225,7 @@ export default function ProductPage() {
                 <div className="text-xs font-semibold text-rose-700">
                   現状の課題
                 </div>
-                <ul className="mt-2 space-y-2 text-[11px] leading-6 text-slate-700">
+                <ul className="mt-2 space-y-2 text-xs leading-6 text-slate-700">
                   {[
                     "広告では「抜け毛対策」を訴求しているが、FVでは成分説明が先行",
                     "レビュー評価が購入直前まで見えない",
@@ -198,9 +245,9 @@ export default function ProductPage() {
                 <div className="text-xs font-semibold text-emerald-700">
                   改善後コピー案・構成
                 </div>
-                <ul className="mt-2 space-y-1.5 text-[11px] leading-6 text-slate-700">
+                <ul className="mt-2 space-y-1.5 text-xs leading-6 text-slate-700">
                   <li className="rounded-lg bg-white px-2.5 py-2">
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-xs text-slate-500">
                       メインコピー (FV)
                     </div>
                     <div className="font-semibold text-slate-800">
@@ -208,21 +255,21 @@ export default function ProductPage() {
                     </div>
                   </li>
                   <li className="rounded-lg bg-white px-2.5 py-2">
-                    <div className="text-[11px] text-slate-500">サブコピー</div>
+                    <div className="text-xs text-slate-500">サブコピー</div>
                     有効成分と継続しやすい定期便で、毎日の頭皮ケアを習慣化
                   </li>
                   <li className="rounded-lg bg-white px-2.5 py-2">
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-xs text-slate-500">
                       推奨FV構成
                     </div>
                     商品画像 + 悩み訴求 + レビュー星 + 定期便CTA
                   </li>
                   <li className="rounded-lg bg-emerald-600 px-2.5 py-2 text-white">
-                    <div className="text-[11px] text-emerald-100">CTA文言</div>
+                    <div className="text-xs text-emerald-100">CTA文言</div>
                     まずは定期初回20%OFFで始める
                   </li>
                   <li className="rounded-lg bg-white px-2.5 py-2">
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-xs text-slate-500">
                       レビュー導線
                     </div>
                     FV直下にレビュー平均と使用者の声を配置
@@ -234,9 +281,9 @@ export default function ProductPage() {
         </div>
 
         {/* Recommended actions + side */}
-        <div className="grid gap-5 lg:grid-cols-12">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-12">
           <SectionCard
-            className="lg:col-span-8"
+            className="min-w-0 lg:col-span-8"
             title="AI推奨施策"
             icon={<ListChecks size={16} />}
             action={
@@ -247,9 +294,9 @@ export default function ProductPage() {
                 すべての施策を施策ボードで管理する →
               </a>
             }
-            bodyClassName="!px-2 !py-2"
+            bodyClassName="!px-2 !py-2 overflow-x-auto"
           >
-            <table className="table-clean">
+            <table className="table-clean min-w-[44rem]">
               <thead>
                 <tr>
                   <th className="!w-8">#</th>
@@ -312,7 +359,7 @@ export default function ProductPage() {
                   月次レポートに反映
                 </button>
               </div>
-              <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
+              <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
                 <div>担当: EC Growth Studio Team</div>
                 <div className="flex items-center gap-2">
                   <Pill tone="gold" size="xs">改善案確認中</Pill>
@@ -357,42 +404,42 @@ export default function ProductPage() {
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-1">
               <div className="mx-auto w-full max-w-[260px] rounded-[28px] border border-slate-200 bg-slate-50 p-3 shadow-card">
-                <div className="rounded-[20px] bg-white p-3 text-[11px]">
+                <div className="rounded-[20px] bg-white p-3 text-xs">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2 text-slate-500">
                     <span>≡</span>
                     <span>Sample Store</span>
                     <span>🛒</span>
                   </div>
-                  <div className="mt-3 rounded-md bg-slate-100 px-2 py-1 text-[11px] text-slate-500">
+                  <div className="mt-3 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-500">
                     抜け毛・薄毛が気になる方へ
                   </div>
                   <div className="mt-2 flex h-24 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-100 to-white text-3xl">
                     🧴
                   </div>
-                  <div className="mt-2 text-[12px] font-bold leading-tight text-slate-900">
+                  <div className="mt-2 text-sm font-bold leading-tight text-slate-900">
                     抜け毛が気になり始めた
                     <br />
                     30代からの薬用スカルプケア
                   </div>
-                  <div className="mt-1 flex items-center gap-1 text-[11px] text-amber-600">
+                  <div className="mt-1 flex items-center gap-1 text-xs text-amber-600">
                     ★★★★☆ 4.6（1,248件のレビュー）
                   </div>
-                  <div className="mt-2 text-[11px] text-slate-500">
+                  <div className="mt-2 text-xs text-slate-500">
                     定期初回20%OFF / 送料無料 / いつでも解約OK
                   </div>
-                  <button className="mt-2 w-full rounded-md bg-emerald-600 py-2 text-[11px] font-semibold text-white">
+                  <button className="mt-2 w-full rounded-md bg-emerald-600 py-2 text-xs font-semibold text-white">
                     まずは定期初回20%OFFで始める
                   </button>
-                  <div className="mt-3 border-t border-slate-100 pt-2 text-[11px] font-semibold text-slate-700">
+                  <div className="mt-3 border-t border-slate-100 pt-2 text-xs font-semibold text-slate-700">
                     こんな悩みありませんか？
                   </div>
-                  <ul className="mt-1 space-y-0.5 text-[11px] text-slate-600">
+                  <ul className="mt-1 space-y-0.5 text-xs text-slate-600">
                     <li>・抜け毛が増えてきた</li>
                     <li>・髪のハリ・コシが気になる</li>
                     <li>・頭皮のべたつき・ニオイが気になる</li>
                   </ul>
                 </div>
-                <div className="mt-2 text-center text-[11px] text-slate-500">
+                <div className="mt-2 text-center text-xs text-slate-500">
                   広告: 抜け毛対策・頭皮ケアをはじめるなら今
                 </div>
               </div>
@@ -471,7 +518,7 @@ function CheckCol({
         <span className="h-1.5 w-1.5 rounded-full bg-current" />
         {title}
       </div>
-      <ul className="mt-1.5 space-y-0.5 pl-3.5 text-[11px] text-slate-600">
+      <ul className="mt-1.5 space-y-0.5 pl-3.5 text-xs text-slate-600">
         {items.map((it) => (
           <li key={it} className="list-disc">
             {it}

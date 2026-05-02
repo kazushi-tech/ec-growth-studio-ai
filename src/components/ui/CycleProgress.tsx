@@ -78,7 +78,7 @@ export default function CycleProgress() {
                 />
                 {/* ノード */}
                 <span
-                  className={`relative z-[1] flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ring-2 ${state.ring} ${
+                  className={`relative z-[1] flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-2 ${state.ring} ${
                     isCurrent ? "shadow-[0_0_0_4px_rgba(56,189,248,0.18)]" : ""
                   }`}
                 >
@@ -106,15 +106,15 @@ export default function CycleProgress() {
                   }`}
                 />
               </div>
-              <div className="mt-1.5 text-[10px] font-medium leading-tight text-slate-700">
+              <div className="mt-1.5 text-xs font-medium leading-tight text-slate-700">
                 {s.title}
               </div>
-              <div className={`text-[10px] ${state.text}`}>{state.label}</div>
+              <div className={`text-xs ${state.text}`}>{state.label}</div>
             </li>
           );
         })}
       </ol>
-      <figcaption className="mt-2 flex items-center justify-between border-t border-slate-200/70 pt-2 text-[11px] text-slate-600">
+      <figcaption className="mt-2 flex items-center justify-between border-t border-slate-200/70 pt-2 text-xs text-slate-600">
         <span className="font-semibold text-slate-700">現在地</span>
         <span className="text-sky-700">{currentLabel}</span>
       </figcaption>

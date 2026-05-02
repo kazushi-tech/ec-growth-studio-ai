@@ -20,6 +20,12 @@ import {
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import SectionCard from "../components/ui/SectionCard";
+import {
+  ChartFrame,
+  HorizontalBarChart,
+  WaterfallChart,
+  chartPalette,
+} from "../components/ui/Charts";
 import Pill, {
   effortTone,
   impactTone,
@@ -545,6 +551,16 @@ export default function RevenueAnalysis() {
   const diffTextClass = intentTextClass[intent];
 
   const maxAbsImpact = Math.max(...factors.map((f) => Math.abs(f.impactYen)));
+  const factorImpactBars = factors.map((f) => ({
+    label: f.label,
+    value: Math.round(Math.abs(f.impactYen) / 1000),
+    color:
+      f.changeIntent === "negative"
+        ? chartPalette.rose
+        : f.changeIntent === "positive"
+          ? chartPalette.sky
+          : chartPalette.slate,
+  }));
 
   return (
     <>
@@ -571,7 +587,7 @@ export default function RevenueAnalysis() {
 
       <div className="space-y-5 px-6 py-5">
         {/* Source-label legend — explain what each pill means */}
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/40 px-4 py-2 text-[11px] text-slate-600">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/40 px-4 py-2 text-xs text-slate-600">
           <span className="font-semibold text-slate-700">凡例:</span>
           <Pill tone="mint" size="xs">注文CSV実値</Pill>
           <Pill tone="sky" size="xs">GA4実値</Pill>
@@ -585,7 +601,7 @@ export default function RevenueAnalysis() {
 
         {/* Real-data status banner */}
         {(ga4Import || ordersImport || adsImport) && (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-2.5 text-[12px] text-emerald-800">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-2.5 text-sm text-emerald-800">
             <BarChart3 size={14} className="text-emerald-600" />
             <span className="font-semibold">CSV実値で反映中</span>
             {ordersImport && (
@@ -603,7 +619,7 @@ export default function RevenueAnalysis() {
                 広告CSV: {adsImport.fileName}
               </Pill>
             )}
-            <span className="ml-auto text-[11px] text-emerald-700/80">
+            <span className="ml-auto text-xs text-emerald-700/80">
               前月値は推定（静的サンプル）/ 今月値はCSVから算出
             </span>
           </div>
@@ -614,53 +630,53 @@ export default function RevenueAnalysis() {
           title="今月の売上変動サマリー"
           icon={<HeadIcon size={16} className={headIconClass} />}
           action={
-            <span className="text-[11px] text-slate-500">
+            <span className="text-xs text-slate-500">
               {base.prevMonth} → {base.month}
             </span>
           }
         >
           <div className="grid gap-4 lg:grid-cols-3">
             <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-              <div className="text-[11px] text-slate-500">売上差分</div>
+              <div className="text-xs text-slate-500">売上差分</div>
               <div className={`mt-1 text-3xl font-semibold tracking-tight ${diffTextClass}`}>
                 {diffPercent}
               </div>
               <div className={`mt-0.5 text-sm font-medium ${diffTextClass}`}>
                 {formatYenSigned(diffYen)}
               </div>
-              <div className="mt-2 text-[11px] text-slate-500">
+              <div className="mt-2 text-xs text-slate-500">
                 前月比 / 売上 = セッション × CVR × AOV で分解
               </div>
             </div>
 
             <div className="rounded-xl border border-slate-100 bg-white p-4">
-              <div className="text-[11px] text-slate-500">前月売上</div>
+              <div className="text-xs text-slate-500">前月売上</div>
               <div className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
                 {formatYenAbs(prevRevenue)}
               </div>
-              <div className="mt-2 text-[11px] text-slate-500">
+              <div className="mt-2 text-xs text-slate-500">
                 {base.prevMonth}{" "}
                 {adjusted && (
-                  <span className="ml-1 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-500">
+                  <span className="ml-1 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">
                     推定
                   </span>
                 )}
               </div>
               <div className="mt-3 border-t border-slate-100 pt-3">
-                <div className="text-[11px] text-slate-500">今月売上</div>
+                <div className="text-xs text-slate-500">今月売上</div>
                 <div className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
                   {formatYenAbs(currRevenue)}
                 </div>
-                <div className="mt-1 text-[11px] text-slate-500">
+                <div className="mt-1 text-xs text-slate-500">
                   {base.month}{" "}
                   {adjusted && (
-                    <span className="ml-1 inline-block rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] text-emerald-700">
+                    <span className="ml-1 inline-block rounded bg-emerald-50 px-1.5 py-0.5 text-xs text-emerald-700">
                       実値反映
                     </span>
                   )}
                 </div>
                 {ordersImport && (
-                  <div className="mt-1 text-[11px] text-slate-400">
+                  <div className="mt-1 text-xs text-slate-400">
                     注文CSV売上合計: {formatYenAbs(ordersImport.aggregation.totalSales)}
                   </div>
                 )}
@@ -675,12 +691,45 @@ export default function RevenueAnalysis() {
               <p className="mt-2 text-sm leading-6 text-slate-800">
                 {primaryDriver}
               </p>
-              <p className="mt-3 text-[11px] leading-6 text-slate-600">
+              <p className="mt-3 text-xs leading-6 text-slate-600">
                 {headline}
               </p>
             </div>
           </div>
         </SectionCard>
+
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+          <ChartFrame
+            title="売上差分 Waterfall"
+            subtitle="前月から今月までの変化を、セッション / CVR / AOV の寄与で確認。"
+            legend={[
+              { label: "基準値", color: chartPalette.navy },
+              { label: "押し上げ", color: chartPalette.sky },
+              { label: "押し下げ", color: chartPalette.rose },
+            ]}
+          >
+            <WaterfallChart
+              ariaLabel="売上差分のウォーターフォールチャート"
+              start={{ label: "前月", value: Math.round(prevRevenue / 1000) }}
+              end={{ label: "今月", value: Math.round(currRevenue / 1000) }}
+              steps={factors.map((f) => ({
+                label: f.label,
+                value: Math.round(f.impactYen / 1000),
+              }))}
+              unit="千円"
+            />
+          </ChartFrame>
+          <ChartFrame
+            title="要因別インパクト"
+            subtitle="絶対額で大きい要因から確認。"
+          >
+            <HorizontalBarChart
+              ariaLabel="売上要因別インパクト"
+              data={factorImpactBars}
+              unit="千円"
+            />
+          </ChartFrame>
+        </div>
 
         {/* Factor cards */}
         <div className="grid gap-4 md:grid-cols-3">
@@ -700,7 +749,7 @@ export default function RevenueAnalysis() {
           title="売上ブリッジ（前月 → 今月）"
           icon={<Activity size={16} />}
           action={
-            <span className="text-[11px] text-slate-500">
+            <span className="text-xs text-slate-500">
               影響量バーは |増減額| / 前月売上 で表示
             </span>
           }
@@ -720,7 +769,7 @@ export default function RevenueAnalysis() {
               title="GA4 チャネル別 流入とCVR"
               icon={<BarChart3 size={16} className="text-sky-600" />}
               action={
-                <span className="text-[11px] text-slate-500">
+                <span className="text-xs text-slate-500">
                   CSV実値（上位5）
                 </span>
               }
@@ -755,7 +804,7 @@ export default function RevenueAnalysis() {
                   </tbody>
                 </table>
               ) : (
-                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-3 text-[11px] text-slate-500">
+                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-3 text-xs text-slate-500">
                   channel 列が見当たりません。session_default_channel_group 等の列を含めるとチャネル別分析が可能になります。
                 </div>
               )}
@@ -765,7 +814,7 @@ export default function RevenueAnalysis() {
               title="GA4 ランディングページ別 CVR"
               icon={<BarChart3 size={16} className="text-sky-600" />}
               action={
-                <span className="text-[11px] text-slate-500">
+                <span className="text-xs text-slate-500">
                   CSV実値（上位5）
                 </span>
               }
@@ -783,7 +832,7 @@ export default function RevenueAnalysis() {
                   <tbody>
                     {ga4Import.aggregation.topLandingPages.map((lp) => (
                       <tr key={lp.landing_page}>
-                        <td className="font-mono text-[11px] text-slate-800">
+                        <td className="font-mono text-xs text-slate-800">
                           {lp.landing_page}
                         </td>
                         <td className="text-slate-600">
@@ -800,7 +849,7 @@ export default function RevenueAnalysis() {
                   </tbody>
                 </table>
               ) : (
-                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-3 text-[11px] text-slate-500">
+                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-3 text-xs text-slate-500">
                   landing_page 列が見当たりません。page_path 等の列を含めるとLP別分析が可能になります。
                 </div>
               )}
@@ -815,7 +864,7 @@ export default function RevenueAnalysis() {
               title="広告 チャネル別 効率（ROAS / CPC / CVR）"
               icon={<Megaphone size={16} className="text-rose-500" />}
               action={
-                <span className="text-[11px] text-slate-500">
+                <span className="text-xs text-slate-500">
                   CSV実値（上位5）
                 </span>
               }
@@ -877,7 +926,7 @@ export default function RevenueAnalysis() {
               title="効率悪化キャンペーン候補"
               icon={<AlertTriangle size={16} className="text-rose-600" />}
               action={
-                <span className="text-[11px] text-slate-500">
+                <span className="text-xs text-slate-500">
                   ROAS / CVR ベースの自動抽出
                 </span>
               }
@@ -887,7 +936,7 @@ export default function RevenueAnalysis() {
                   {adsImport.aggregation.inefficientCampaigns.map((c) => (
                     <li
                       key={c.campaign}
-                      className="rounded-xl border border-rose-200 bg-rose-50/40 p-3 text-[12px]"
+                      className="rounded-xl border border-rose-200 bg-rose-50/40 p-3 text-sm"
                     >
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-semibold text-slate-800">
@@ -899,23 +948,23 @@ export default function RevenueAnalysis() {
                         <Pill tone="rose" size="xs">
                           ROAS {formatRoas(c.roas)}
                         </Pill>
-                        <span className="ml-auto text-[11px] text-slate-500">
+                        <span className="ml-auto text-xs text-slate-500">
                           広告費 ¥
                           {Math.round(c.cost).toLocaleString("ja-JP")}
                         </span>
                       </div>
-                      <p className="mt-1.5 text-[11px] leading-5 text-slate-700">
+                      <p className="mt-1.5 text-xs leading-5 text-slate-700">
                         {c.reason}
                       </p>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-3 text-[11px] text-slate-500">
+                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-3 text-xs text-slate-500">
                   全体平均を大きく下回るキャンペーンは見当たりません。配分は概ね効率的に保たれています。
                 </div>
               )}
-              <p className="mt-3 text-[11px] text-slate-500">
+              <p className="mt-3 text-xs text-slate-500">
                 ※ ROAS &lt; 全体平均 × 0.7、または CVR &lt; 全体平均 × 0.5 のキャンペーンを最大3件抽出。
               </p>
             </SectionCard>
@@ -928,7 +977,7 @@ export default function RevenueAnalysis() {
             title="原因候補"
             icon={<AlertTriangle size={16} />}
             action={
-              <span className="text-[11px] text-slate-500">
+              <span className="text-xs text-slate-500">
                 商品 / チャネル / 全体に分解
               </span>
             }
@@ -955,10 +1004,10 @@ export default function RevenueAnalysis() {
                       </Pill>
                     </span>
                   </div>
-                  <p className="mt-2 text-[13px] leading-6 text-slate-700">
+                  <p className="mt-2 text-sm leading-6 text-slate-700">
                     {c.summary}
                   </p>
-                  <div className="mt-1.5 text-[11px] font-mono text-slate-500">
+                  <div className="mt-1.5 text-xs font-mono text-slate-500">
                     根拠: {c.evidence}
                   </div>
                 </li>
@@ -1003,10 +1052,10 @@ export default function RevenueAnalysis() {
                   <div className="mt-2 text-sm font-semibold text-slate-800">
                     {a.title}
                   </div>
-                  <p className="mt-1 text-[12px] leading-6 text-slate-600">
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
                     なぜ: {a.why}
                   </p>
-                  <div className="mt-1 text-[12px] text-emerald-700">
+                  <div className="mt-1 text-sm text-emerald-700">
                     期待: {a.expected}
                   </div>
                 </li>
@@ -1053,13 +1102,13 @@ export default function RevenueAnalysis() {
                       {d.state}
                     </Pill>
                   </div>
-                  <p className="mt-1.5 text-[12px] leading-6 text-slate-600">
+                  <p className="mt-1.5 text-sm leading-6 text-slate-600">
                     {d.note}
                   </p>
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-[11px] text-slate-500">
+            <p className="mt-3 text-xs text-slate-500">
               {adsImport && ga4Import
                 ? "GA4 / 広告 CSV を反映済み。チャネル別 ROAS / CVR / CPC まで実値で要因分解しています。BigQuery 直接接続で自動更新化するのは将来フェーズです。"
                 : adsImport
@@ -1071,12 +1120,12 @@ export default function RevenueAnalysis() {
           </SectionCard>
 
           <SectionCard title="この画面の役割" icon={<Compass size={16} />}>
-            <p className="text-[13px] leading-7 text-slate-700">
+            <p className="text-sm leading-7 text-slate-700">
               ここは GA4 や BigQuery を <b>読む画面ではありません</b>。
               EC担当者が「今月なぜ売上が動いたか」と
               「次に何を直すべきか」を <b>判断する画面</b> です。
             </p>
-            <ul className="mt-3 space-y-1.5 text-[12px] text-slate-600">
+            <ul className="mt-3 space-y-1.5 text-sm text-slate-600">
               <li className="flex items-start gap-2">
                 <ChevronRight size={12} className="mt-1 text-slate-400" />
                 数値はAIの主因候補。最終判断は担当者が行う
@@ -1148,7 +1197,7 @@ function FactorCard({
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         <div className="rounded-md bg-slate-50/60 px-2.5 py-1.5">
-          <div className="text-[11px] text-slate-500">
+          <div className="text-xs text-slate-500">
             前月{dynamic ? "（推定）" : ""}
           </div>
           <div className="text-sm font-semibold text-slate-800">
@@ -1156,7 +1205,7 @@ function FactorCard({
           </div>
         </div>
         <div className="rounded-md bg-white px-2.5 py-1.5 ring-1 ring-slate-100">
-          <div className="text-[11px] text-slate-500">今月</div>
+          <div className="text-xs text-slate-500">今月</div>
           <div className="text-sm font-semibold text-slate-900">
             {factor.currValue}
           </div>
@@ -1164,7 +1213,7 @@ function FactorCard({
       </div>
 
       <div className="mt-3">
-        <div className="flex items-center justify-between text-[11px]">
+        <div className="flex items-center justify-between text-xs">
           <span className="text-slate-500">売上への影響</span>
           <span
             className={`font-semibold ${intentTextClass[factor.changeIntent]}`}
@@ -1181,7 +1230,7 @@ function FactorCard({
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        <p className="text-[11px] leading-6 text-slate-500">
+        <p className="text-xs leading-6 text-slate-500">
           {factor.driverNote}
         </p>
         <Pill tone={sourcePillTone[source]} size="xs">
@@ -1275,7 +1324,7 @@ function RevenueBridge({
         accent="text-slate-700"
       />
 
-      <p className="mt-2 text-[11px] text-slate-500">
+      <p className="mt-2 text-xs text-slate-500">
         {adjusted
           ? "※ 影響額は連鎖法による概算（ΔS×Cprev×Aprev → Scurr×ΔC×Aprev → Scurr×Ccurr×ΔA）。前月値は静的サンプルを推定値として用いています。"
           : "※ 影響額は概算です。GA4 / 広告CSV を取り込むとチャネル別の精度が上がります。"}
@@ -1287,7 +1336,7 @@ function RevenueBridge({
 function SmallStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-slate-100 bg-white p-3">
-      <div className="text-[11px] text-slate-500">{label}</div>
+      <div className="text-xs text-slate-500">{label}</div>
       <div className="mt-1 text-base font-semibold tracking-tight text-slate-900">
         {value}
       </div>
@@ -1312,13 +1361,13 @@ function BridgeRow({
 }) {
   return (
     <div className="grid items-center gap-2 sm:grid-cols-[160px_1fr_140px]">
-      <div className="flex items-center gap-1.5 text-[12px] font-medium text-slate-700">
+      <div className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
         {icon}
         {label}
-        {sub && <span className="text-[11px] font-normal text-slate-500">{sub}</span>}
+        {sub && <span className="text-xs font-normal text-slate-500">{sub}</span>}
       </div>
       <div>{bar}</div>
-      <div className={`text-right text-[12px] font-semibold ${accent}`}>
+      <div className={`text-right text-sm font-semibold ${accent}`}>
         {value}
       </div>
     </div>

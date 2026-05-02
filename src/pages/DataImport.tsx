@@ -22,8 +22,14 @@ import {
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import SectionCard from "../components/ui/SectionCard";
+import {
+  ChartFrame,
+  HorizontalBarChart,
+  StackedBar,
+  chartPalette,
+} from "../components/ui/Charts";
 import Pill from "../components/ui/Pill";
-import { dataSources } from "../data/sample";
+import { dataCoverageBars, dataSources } from "../data/sample";
 import type { DataSource } from "../data/sample";
 import { useImport } from "../lib/csv/ImportContext";
 import { formatYen, formatInt } from "../lib/csv/aggregateOrders";
@@ -152,9 +158,43 @@ export default function DataImport() {
       />
 
       <div className="space-y-5 px-6 py-5">
-        <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-1.5 text-[11px] text-slate-600">
+        <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-1.5 text-xs text-slate-600">
           <ShieldCheck size={12} className="text-emerald-600" />
           メモリ／ブラウザ保存のみ。外部送信なし。
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <ChartFrame
+            title="診断データ充足率"
+            subtitle="CSV-first / API-later の現在地を、色カードではなく進捗で確認。"
+          >
+            <HorizontalBarChart
+              ariaLabel="診断データ充足率"
+              data={dataCoverageBars.map((d, i) => ({
+                ...d,
+                color:
+                  i < 3
+                    ? chartPalette.navy
+                    : i === 3
+                      ? chartPalette.sky
+                      : chartPalette.slate,
+              }))}
+              unit="%"
+            />
+          </ChartFrame>
+          <ChartFrame
+            title="接続状態の内訳"
+            subtitle="今すぐ使うCSVと、将来接続を分けて表示。"
+          >
+            <StackedBar
+              ariaLabel="接続状態の内訳"
+              data={[
+                { label: "CSV実値", value: 3, color: chartPalette.navy },
+                { label: "Previewデモ", value: 1, color: chartPalette.sky },
+                { label: "将来接続", value: 3, color: chartPalette.slate },
+              ]}
+            />
+          </ChartFrame>
         </div>
 
         {/* Connection-state guide — explain what's real CSV vs demo vs not-yet-connected */}
@@ -167,7 +207,7 @@ export default function DataImport() {
             </Pill>
           }
         >
-          <p className="text-[12px] leading-6 text-slate-700">
+          <p className="text-sm leading-6 text-slate-700">
             現時点では、<b>実GCP接続ではなく、CSVとBigQueryデモで月次運用フローを確認</b>できます。
             実 GA4 API / 実 広告 API / 実 BigQuery / 実 AI API はまだ接続していません。
             BigQueryデモは <b>BQ_MOCK_MODE=true の Preview のみ</b> 動作し、
@@ -179,7 +219,7 @@ export default function DataImport() {
                 <CheckCircle2 size={13} />
                 CSVで今すぐ試せる（実値）
               </div>
-              <ul className="mt-2 space-y-1 text-[11px] leading-5 text-slate-700">
+              <ul className="mt-2 space-y-1 text-xs leading-5 text-slate-700">
                 <li>・注文CSV — 売上 / 注文数 / AOV を実値で再計算</li>
                 <li>・GA4 CSV — セッション / CVR / チャネル別 を実値化</li>
                 <li>・広告CSV — ROAS / CPC / 効率悪化キャンペーンを実値化</li>
@@ -190,7 +230,7 @@ export default function DataImport() {
                 <Beaker size={13} />
                 デモとして見せられる（接続後の再現）
               </div>
-              <ul className="mt-2 space-y-1 text-[11px] leading-5 text-slate-700">
+              <ul className="mt-2 space-y-1 text-xs leading-5 text-slate-700">
                 <li>・BigQueryデモ — <b>BQ_MOCK_MODE=true の Preview</b> では Dashboard上部のトグルでON</li>
                 <li>・<b>実GCP接続ではない</b>（mock応答 / GCP未接続）</li>
                 <li>・接続後にKPIがどう流れるかの見え方を再現</li>
@@ -202,7 +242,7 @@ export default function DataImport() {
                 <Plug size={13} />
                 まだ未接続（将来予定）
               </div>
-              <ul className="mt-2 space-y-1 text-[11px] leading-5 text-slate-700">
+              <ul className="mt-2 space-y-1 text-xs leading-5 text-slate-700">
                 <li>・Shopify Admin API — Phase 4</li>
                 <li>・GA4 Data API / Google広告 / Meta広告 API — Phase 3 / 4</li>
                 <li>・実 BigQuery クエリ実行 — Phase 3 後続</li>
@@ -219,7 +259,7 @@ export default function DataImport() {
               <div className="text-xs font-semibold text-slate-700">
                 ECサイトはお客さまが保有
               </div>
-              <p className="mt-1 text-[11px] leading-6 text-slate-600">
+              <p className="mt-1 text-xs leading-6 text-slate-600">
                 Shopify / 楽天 / 自社カート など、お客さまが既に運用している
                 ECサイトを前提とします。当サービス側では構築・保有しません。
               </p>
@@ -228,7 +268,7 @@ export default function DataImport() {
               <div className="text-xs font-semibold text-slate-700">
                 月次改善のための分析・運用レイヤー
               </div>
-              <p className="mt-1 text-[11px] leading-6 text-slate-600">
+              <p className="mt-1 text-xs leading-6 text-slate-600">
                 注文CSV / GA4 / 広告CSV / BigQuery などを読み取り、
                 AI診断 → 人間レビュー → 施策ボード → 月次レポートへ
                 変換するレイヤーとして機能します。
@@ -238,7 +278,7 @@ export default function DataImport() {
               <div className="text-xs font-semibold text-slate-700">
                 CSV-first / API-later
               </div>
-              <p className="mt-1 text-[11px] leading-6 text-slate-600">
+              <p className="mt-1 text-xs leading-6 text-slate-600">
                 MVPではCSV取込から開始。将来は GA4 / BigQuery / 広告API への
                 <b>読み取り専用</b>連携を順次追加します。
                 認証情報やAPIキーはまだ扱いません。
@@ -263,7 +303,7 @@ export default function DataImport() {
                 主価値は「GA4 / BigQuery 接続」ではなく
                 「売上変動の原因分解と次アクション化」
               </div>
-              <p className="mt-1.5 text-[11px] leading-6 text-slate-700">
+              <p className="mt-1.5 text-xs leading-6 text-slate-700">
                 GA4 / BigQuery は売上要因分解のための<b>入力チャネル</b>と位置づけます。
                 技術的にはすぐ接続できる前提で設計しますが、本MVPでは
                 <b> 実API接続 / OAuth / GCP認証 / BigQuery クエリ実行は実装しません</b>。
@@ -274,7 +314,7 @@ export default function DataImport() {
               <div className="text-xs font-semibold text-slate-700">
                 将来のつなぎ先
               </div>
-              <p className="mt-1 text-[11px] leading-6 text-slate-600">
+              <p className="mt-1 text-xs leading-6 text-slate-600">
                 Insight Studio で構築済みの BigQuery 分析基盤を、EC向けの
                 売上要因分解にそのまま接続する想定です。
               </p>
@@ -282,7 +322,7 @@ export default function DataImport() {
           </div>
 
           <div className="mt-4">
-            <div className="text-[11px] font-semibold text-slate-700">
+            <div className="text-xs font-semibold text-slate-700">
               接続前に揃えていただくもの（読み取り専用）
             </div>
             <ul className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
@@ -316,13 +356,13 @@ export default function DataImport() {
                     <CheckCircle2 size={12} className="text-slate-400" />
                     {it.label}
                   </div>
-                  <p className="mt-1 text-[11px] leading-5 text-slate-600">
+                  <p className="mt-1 text-xs leading-5 text-slate-600">
                     {it.detail}
                   </p>
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-[11px] text-slate-500">
+            <p className="mt-3 text-xs text-slate-500">
               本画面では情報の可視化のみ行います。
               認証情報・APIキー・OAuth トークンの保存は実装しません。
             </p>
@@ -390,13 +430,13 @@ export default function DataImport() {
               </button>
             }
           >
-            <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3 text-[12px] text-rose-800">
+            <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3 text-sm text-rose-800">
               <div className="flex flex-wrap items-center gap-2">
                 <Pill tone="rose" size="xs">
                   反映なし
                 </Pill>
-                <span className="font-mono text-[11px]">{lastFailure.fileName}</span>
-                <span className="text-[11px] text-rose-700/70">
+                <span className="font-mono text-xs">{lastFailure.fileName}</span>
+                <span className="text-xs text-rose-700/70">
                   {lastFailure.attemptedAt.toLocaleString("ja-JP")}
                 </span>
               </div>
@@ -415,18 +455,18 @@ export default function DataImport() {
                 items={lastFailure.parseResult.errors.map((e) => e.message)}
                 icon={<XCircle size={13} />}
               />
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs text-slate-600">
                 <div className="font-semibold text-slate-700">検出されたカラム</div>
                 <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                   {Object.entries(lastFailure.parseResult.detectedColumns).map(
                     ([k, v]) => (
-                      <li key={k} className="font-mono text-[11px]">
+                      <li key={k} className="font-mono text-xs">
                         {k}: {v ?? <span className="text-rose-500">未検出</span>}
                       </li>
                     ),
                   )}
                 </ul>
-                <div className="mt-2 text-[11px] text-slate-500">
+                <div className="mt-2 text-xs text-slate-500">
                   受理した行数: {formatInt(lastFailure.parseResult.acceptedRows)} /{" "}
                   {formatInt(lastFailure.parseResult.totalRows)}
                 </div>
@@ -501,7 +541,7 @@ export default function DataImport() {
 
             <div className="mt-4 grid gap-3 lg:grid-cols-2">
               <div>
-                <div className="text-[11px] font-semibold text-slate-700">
+                <div className="text-xs font-semibold text-slate-700">
                   商品別売上 上位
                 </div>
                 <table className="table-clean mt-1.5">
@@ -561,19 +601,19 @@ export default function DataImport() {
                 )}
                 {ordersImport.parseResult.errors.length === 0 &&
                   ordersImport.parseResult.warnings.length === 0 && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-[11px] text-emerald-700">
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-xs text-emerald-700">
                       警告・エラーなしで取込完了しました。
                     </div>
                   )}
 
-                <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs text-slate-600">
                   <div className="font-semibold text-slate-700">
                     検出されたカラム
                   </div>
                   <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                     {Object.entries(ordersImport.parseResult.detectedColumns).map(
                       ([k, v]) => (
-                        <li key={k} className="font-mono text-[11px]">
+                        <li key={k} className="font-mono text-xs">
                           {k}: {v ?? <span className="text-rose-500">未検出</span>}
                         </li>
                       ),
@@ -599,13 +639,13 @@ export default function DataImport() {
               </button>
             }
           >
-            <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3 text-[12px] text-rose-800">
+            <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3 text-sm text-rose-800">
               <div className="flex flex-wrap items-center gap-2">
                 <Pill tone="rose" size="xs">
                   反映なし
                 </Pill>
-                <span className="font-mono text-[11px]">{ga4Failure.fileName}</span>
-                <span className="text-[11px] text-rose-700/70">
+                <span className="font-mono text-xs">{ga4Failure.fileName}</span>
+                <span className="text-xs text-rose-700/70">
                   {ga4Failure.attemptedAt.toLocaleString("ja-JP")}
                 </span>
               </div>
@@ -624,18 +664,18 @@ export default function DataImport() {
                 items={ga4Failure.parseResult.errors.map((e) => e.message)}
                 icon={<XCircle size={13} />}
               />
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs text-slate-600">
                 <div className="font-semibold text-slate-700">検出されたカラム</div>
                 <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                   {Object.entries(ga4Failure.parseResult.detectedColumns).map(
                     ([k, v]) => (
-                      <li key={k} className="font-mono text-[11px]">
+                      <li key={k} className="font-mono text-xs">
                         {k}: {v ?? <span className="text-rose-500">未検出</span>}
                       </li>
                     ),
                   )}
                 </ul>
-                <div className="mt-2 text-[11px] text-slate-500">
+                <div className="mt-2 text-xs text-slate-500">
                   受理した行数: {formatInt(ga4Failure.parseResult.acceptedRows)} /{" "}
                   {formatInt(ga4Failure.parseResult.totalRows)}
                 </div>
@@ -756,7 +796,7 @@ export default function DataImport() {
 
             <div className="mt-4 grid gap-3 lg:grid-cols-2">
               <div>
-                <div className="text-[11px] font-semibold text-slate-700">
+                <div className="text-xs font-semibold text-slate-700">
                   上位チャネル
                 </div>
                 {ga4Import.aggregation.hasChannel ? (
@@ -789,12 +829,12 @@ export default function DataImport() {
                     </tbody>
                   </table>
                 ) : (
-                  <div className="mt-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-2 text-[11px] text-slate-500">
+                  <div className="mt-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-2 text-xs text-slate-500">
                     channel 列が見当たらないため集計できません。
                   </div>
                 )}
 
-                <div className="mt-3 text-[11px] font-semibold text-slate-700">
+                <div className="mt-3 text-xs font-semibold text-slate-700">
                   上位ランディングページ
                 </div>
                 {ga4Import.aggregation.hasLandingPage ? (
@@ -810,7 +850,7 @@ export default function DataImport() {
                     <tbody>
                       {ga4Import.aggregation.topLandingPages.map((lp) => (
                         <tr key={lp.landing_page}>
-                          <td className="font-mono text-[11px] text-slate-800">
+                          <td className="font-mono text-xs text-slate-800">
                             {lp.landing_page}
                           </td>
                           <td className="text-slate-600">
@@ -827,7 +867,7 @@ export default function DataImport() {
                     </tbody>
                   </table>
                 ) : (
-                  <div className="mt-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-2 text-[11px] text-slate-500">
+                  <div className="mt-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-2 text-xs text-slate-500">
                     landing_page 列が見当たらないため集計できません。
                   </div>
                 )}
@@ -852,32 +892,32 @@ export default function DataImport() {
                     )}
                   />
                 ) : (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-[11px] text-emerald-700">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-xs text-emerald-700">
                     警告・エラーなしで取込完了しました。
                   </div>
                 )}
 
-                <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs text-slate-600">
                   <div className="font-semibold text-slate-700">
                     検出されたカラム
                   </div>
                   <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                     {Object.entries(ga4Import.parseResult.detectedColumns).map(
                       ([k, v]) => (
-                        <li key={k} className="font-mono text-[11px]">
+                        <li key={k} className="font-mono text-xs">
                           {k}:{" "}
                           {v ?? <span className="text-rose-500">未検出</span>}
                         </li>
                       ),
                     )}
                   </ul>
-                  <div className="mt-2 text-[11px] text-slate-500">
+                  <div className="mt-2 text-xs text-slate-500">
                     受理した行数: {formatInt(ga4Import.parseResult.acceptedRows)} /{" "}
                     {formatInt(ga4Import.parseResult.totalRows)}
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-sky-200 bg-sky-50/40 p-3 text-[11px] text-slate-700">
+                <div className="rounded-xl border border-sky-200 bg-sky-50/40 p-3 text-xs text-slate-700">
                   GA4 CSV はメモリ／ブラウザ保存のみで処理しています。
                   外部送信なし。BigQuery 直接接続は次フェーズです。
                 </div>
@@ -900,13 +940,13 @@ export default function DataImport() {
               </button>
             }
           >
-            <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3 text-[12px] text-rose-800">
+            <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3 text-sm text-rose-800">
               <div className="flex flex-wrap items-center gap-2">
                 <Pill tone="rose" size="xs">
                   反映なし
                 </Pill>
-                <span className="font-mono text-[11px]">{adsFailure.fileName}</span>
-                <span className="text-[11px] text-rose-700/70">
+                <span className="font-mono text-xs">{adsFailure.fileName}</span>
+                <span className="text-xs text-rose-700/70">
                   {adsFailure.attemptedAt.toLocaleString("ja-JP")}
                 </span>
               </div>
@@ -925,18 +965,18 @@ export default function DataImport() {
                 items={adsFailure.parseResult.errors.map((e) => e.message)}
                 icon={<XCircle size={13} />}
               />
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs text-slate-600">
                 <div className="font-semibold text-slate-700">検出されたカラム</div>
                 <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                   {Object.entries(adsFailure.parseResult.detectedColumns).map(
                     ([k, v]) => (
-                      <li key={k} className="font-mono text-[11px]">
+                      <li key={k} className="font-mono text-xs">
                         {k}: {v ?? <span className="text-rose-500">未検出</span>}
                       </li>
                     ),
                   )}
                 </ul>
-                <div className="mt-2 text-[11px] text-slate-500">
+                <div className="mt-2 text-xs text-slate-500">
                   受理した行数: {formatInt(adsFailure.parseResult.acceptedRows)} /{" "}
                   {formatInt(adsFailure.parseResult.totalRows)}
                 </div>
@@ -1031,7 +1071,7 @@ export default function DataImport() {
 
             <div className="mt-4 grid gap-3 lg:grid-cols-2">
               <div>
-                <div className="text-[11px] font-semibold text-slate-700">
+                <div className="text-xs font-semibold text-slate-700">
                   チャネル別 上位
                 </div>
                 <table className="table-clean mt-1.5">
@@ -1063,7 +1103,7 @@ export default function DataImport() {
                   </tbody>
                 </table>
 
-                <div className="mt-3 text-[11px] font-semibold text-slate-700">
+                <div className="mt-3 text-xs font-semibold text-slate-700">
                   キャンペーン別 上位
                 </div>
                 <table className="table-clean mt-1.5">
@@ -1094,13 +1134,13 @@ export default function DataImport() {
 
               <div className="space-y-2">
                 {adsImport.aggregation.inefficientCampaigns.length > 0 && (
-                  <div className="rounded-xl border border-rose-200 bg-rose-50/40 p-3 text-[12px]">
+                  <div className="rounded-xl border border-rose-200 bg-rose-50/40 p-3 text-sm">
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-700">
                       <AlertTriangle size={13} />
                       効率悪化キャンペーン候補 (
                       {adsImport.aggregation.inefficientCampaigns.length})
                     </div>
-                    <ul className="mt-1.5 space-y-1.5 text-[11px] leading-5 text-slate-700">
+                    <ul className="mt-1.5 space-y-1.5 text-xs leading-5 text-slate-700">
                       {adsImport.aggregation.inefficientCampaigns.map((c) => (
                         <li
                           key={c.campaign}
@@ -1142,32 +1182,32 @@ export default function DataImport() {
                     )}
                   />
                 ) : (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-[11px] text-emerald-700">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-xs text-emerald-700">
                     警告・エラーなしで取込完了しました。
                   </div>
                 )}
 
-                <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs text-slate-600">
                   <div className="font-semibold text-slate-700">
                     検出されたカラム
                   </div>
                   <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
                     {Object.entries(adsImport.parseResult.detectedColumns).map(
                       ([k, v]) => (
-                        <li key={k} className="font-mono text-[11px]">
+                        <li key={k} className="font-mono text-xs">
                           {k}:{" "}
                           {v ?? <span className="text-rose-500">未検出</span>}
                         </li>
                       ),
                     )}
                   </ul>
-                  <div className="mt-2 text-[11px] text-slate-500">
+                  <div className="mt-2 text-xs text-slate-500">
                     受理した行数: {formatInt(adsImport.parseResult.acceptedRows)} /{" "}
                     {formatInt(adsImport.parseResult.totalRows)}
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-rose-200 bg-rose-50/40 p-3 text-[11px] text-slate-700">
+                <div className="rounded-xl border border-rose-200 bg-rose-50/40 p-3 text-xs text-slate-700">
                   広告CSV はメモリ／ブラウザ保存のみで処理しています。
                   外部送信なし。Google広告 / Meta広告 API 接続は将来フェーズです。
                 </div>
@@ -1177,14 +1217,14 @@ export default function DataImport() {
         )}
 
         {/* Two cols: data source list / AI diagnosis influence */}
-        <div className="grid gap-5 lg:grid-cols-3">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-3">
           <SectionCard
-            className="lg:col-span-2"
+            className="min-w-0 lg:col-span-2"
             title="データソース一覧"
             icon={<Database size={16} />}
-            bodyClassName="!px-2 !py-2"
+            bodyClassName="!px-2 !py-2 overflow-x-auto"
           >
-            <table className="table-clean">
+            <table className="table-clean min-w-[48rem]">
               <thead>
                 <tr>
                   <th>データソース</th>
@@ -1251,12 +1291,13 @@ export default function DataImport() {
                 })}
               </tbody>
             </table>
-            <p className="mt-2 px-3 pb-1 text-[11px] text-slate-400">
+            <p className="mt-2 px-3 pb-1 text-xs text-slate-400">
               ※ 状態の説明: 取込済み=データが最新、要確認=差分/不整合の可能性、未接続=データ未連携、任意=より高度な分析に有効
             </p>
           </SectionCard>
 
           <SectionCard
+            className="min-w-0"
             title="AI診断への影響"
             icon={<Sparkles size={16} />}
           >
@@ -1265,7 +1306,7 @@ export default function DataImport() {
                 <CheckCircle2 size={14} />
                 このデータだけで月次診断可能
               </div>
-              <p className="mt-1 text-[11px] leading-6 text-slate-600">
+              <p className="mt-1 text-xs leading-6 text-slate-600">
                 主要な診断は現在のデータで実施できます。
               </p>
             </div>
@@ -1297,10 +1338,10 @@ export default function DataImport() {
             />
 
             <div className="mt-3 border-t border-slate-100 pt-3">
-              <div className="text-[11px] font-semibold text-slate-700">
+              <div className="text-xs font-semibold text-slate-700">
                 次に取り込むべきデータ
               </div>
-              <p className="mt-1 text-[11px] text-slate-500">
+              <p className="mt-1 text-xs text-slate-500">
                 レビューCSVを追加すると信頼要素診断が可能になります。
               </p>
               <button className="btn-secondary mt-2 w-full justify-center text-xs">
@@ -1317,7 +1358,7 @@ export default function DataImport() {
             title="CSVアップロード"
             icon={<Upload size={16} />}
           >
-            <div className="mb-3 flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white p-1 text-[11px]">
+            <div className="mb-3 flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white p-1 text-xs">
               <button
                 type="button"
                 onClick={() => setCsvMode("orders")}
@@ -1380,7 +1421,7 @@ export default function DataImport() {
                       ? "広告CSV をドラッグ＆ドロップ"
                       : "注文CSV をドラッグ＆ドロップ"}
               </div>
-              <div className="text-[11px] text-slate-500">
+              <div className="text-xs text-slate-500">
                 またはクリックしてファイルを選択
               </div>
               <div className="mt-3 flex flex-wrap justify-center gap-1.5">
@@ -1445,101 +1486,101 @@ export default function DataImport() {
                 </a>
               </div>
               {uploadError && (
-                <div className="mt-3 inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1 text-[11px] text-rose-700">
+                <div className="mt-3 inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1 text-xs text-rose-700">
                   <XCircle size={12} /> {uploadError}
                 </div>
               )}
             </div>
 
             {csvMode === "orders" && (
-              <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+              <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs text-slate-600">
                 <div className="font-semibold text-slate-700">
                   注文CSVテンプレート（最小カラム）
                 </div>
                 <ul className="mt-1.5 space-y-0.5">
                   <li>
-                    <span className="font-mono text-[11px]">order_id</span> — 注文番号（必須）
+                    <span className="font-mono text-xs">order_id</span> — 注文番号（必須）
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">order_date</span> — 注文日 / date / 注文日（YYYY-MM-DD）
+                    <span className="font-mono text-xs">order_date</span> — 注文日 / date / 注文日（YYYY-MM-DD）
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">customer_id</span> — 顧客ID（任意・リピート分析に使用）
+                    <span className="font-mono text-xs">customer_id</span> — 顧客ID（任意・リピート分析に使用）
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">product_name</span> — 商品名 / product / 商品名
+                    <span className="font-mono text-xs">product_name</span> — 商品名 / product / 商品名
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">quantity</span> — 数量 / qty
+                    <span className="font-mono text-xs">quantity</span> — 数量 / qty
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">total_sales</span> — total / sales / 売上（税込・¥可）
+                    <span className="font-mono text-xs">total_sales</span> — total / sales / 売上（税込・¥可）
                   </li>
                 </ul>
               </div>
             )}
             {csvMode === "ga4" && (
-              <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+              <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs text-slate-600">
                 <div className="font-semibold text-slate-700">
                   GA4 CSVテンプレート（最小カラム）
                 </div>
                 <ul className="mt-1.5 space-y-0.5">
                   <li>
-                    <span className="font-mono text-[11px]">date</span> — 日付（必須） / event_date / 日付
+                    <span className="font-mono text-xs">date</span> — 日付（必須） / event_date / 日付
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">sessions</span> — セッション数（必須） / セッション
+                    <span className="font-mono text-xs">sessions</span> — セッション数（必須） / セッション
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">users</span> — ユーザー数（任意） / active_users
+                    <span className="font-mono text-xs">users</span> — ユーザー数（任意） / active_users
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">purchases</span> — 購入数（任意・CVRに使用） / transactions / 購入
+                    <span className="font-mono text-xs">purchases</span> — 購入数（任意・CVRに使用） / transactions / 購入
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">total_revenue</span> — GA4売上（任意） / revenue
+                    <span className="font-mono text-xs">total_revenue</span> — GA4売上（任意） / revenue
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">channel</span> — チャネル（任意） / session_default_channel_group / 流入元
+                    <span className="font-mono text-xs">channel</span> — チャネル（任意） / session_default_channel_group / 流入元
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">landing_page</span> — LP（任意） / page_path / ランディングページ
+                    <span className="font-mono text-xs">landing_page</span> — LP（任意） / page_path / ランディングページ
                   </li>
                 </ul>
               </div>
             )}
             {csvMode === "ads" && (
-              <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-[11px] text-slate-600">
+              <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs text-slate-600">
                 <div className="font-semibold text-slate-700">
                   広告CSVテンプレート（最小カラム）
                 </div>
                 <ul className="mt-1.5 space-y-0.5">
                   <li>
-                    <span className="font-mono text-[11px]">campaign</span> — キャンペーン名（必須） / campaign_name / キャンペーン
+                    <span className="font-mono text-xs">campaign</span> — キャンペーン名（必須） / campaign_name / キャンペーン
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">channel</span> — 媒体（必須） / platform / media / 媒体名
+                    <span className="font-mono text-xs">channel</span> — 媒体（必須） / platform / media / 媒体名
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">date</span> — 配信日（必須） / day / 日付
+                    <span className="font-mono text-xs">date</span> — 配信日（必須） / day / 日付
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">cost</span> — 広告費（必須） / spend / 費用 / 消化金額
+                    <span className="font-mono text-xs">cost</span> — 広告費（必須） / spend / 費用 / 消化金額
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">impressions</span> — 表示回数（任意） / imp
+                    <span className="font-mono text-xs">impressions</span> — 表示回数（任意） / imp
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">clicks</span> — クリック数（任意） / click
+                    <span className="font-mono text-xs">clicks</span> — クリック数（任意） / click
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">conversions</span> — コンバージョン（任意） / conv / purchases
+                    <span className="font-mono text-xs">conversions</span> — コンバージョン（任意） / conv / purchases
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">revenue</span> — 広告経由売上（任意・ROAS算出に使用） / conversion_value
+                    <span className="font-mono text-xs">revenue</span> — 広告経由売上（任意・ROAS算出に使用） / conversion_value
                   </li>
                   <li>
-                    <span className="font-mono text-[11px]">product_name</span> — 紐付け商品（任意）
+                    <span className="font-mono text-xs">product_name</span> — 紐付け商品（任意）
                   </li>
                 </ul>
               </div>
@@ -1551,7 +1592,7 @@ export default function DataImport() {
             title="取込の流れ"
             icon={<ChevronRight size={16} />}
           >
-            <ol className="grid grid-cols-4 gap-2 text-center text-[11px]">
+            <ol className="grid grid-cols-4 gap-2 text-center text-xs">
               {[
                 { l: "アップロード", c: "bg-sky-100 text-sky-700" },
                 { l: "カラムマッピング", c: "bg-amber-100 text-amber-700" },
@@ -1569,10 +1610,10 @@ export default function DataImport() {
               ))}
             </ol>
             <div className="mt-4 border-t border-slate-100 pt-3">
-              <div className="text-[11px] font-semibold text-slate-700">
+              <div className="text-xs font-semibold text-slate-700">
                 アップロード履歴（直近）
               </div>
-              <ul className="mt-2 space-y-1.5 text-[11px]">
+              <ul className="mt-2 space-y-1.5 text-xs">
                 {(ordersImport
                   ? ([
                       [
@@ -1598,19 +1639,19 @@ export default function DataImport() {
                     key={n}
                     className="flex items-center justify-between rounded-lg border border-slate-100 px-2.5 py-1.5"
                   >
-                    <span className="truncate font-mono text-[11px] text-slate-700">
+                    <span className="truncate font-mono text-xs text-slate-700">
                       {n}
                     </span>
                     <span className="flex items-center gap-2">
                       <Pill tone={t as "mint" | "gold"} size="xs">
                         {s}
                       </Pill>
-                      <span className="text-[11px] text-slate-400">{d}</span>
+                      <span className="text-xs text-slate-400">{d}</span>
                     </span>
                   </li>
                 ))}
               </ul>
-              <button className="mt-2 text-[11px] text-sky-600 hover:text-sky-700">
+              <button className="mt-2 text-xs text-sky-600 hover:text-sky-700">
                 すべての履歴を見る
               </button>
             </div>
@@ -1626,7 +1667,7 @@ export default function DataImport() {
               </Pill>
             }
           >
-            <p className="text-[11px] leading-6 text-slate-500">
+            <p className="text-xs leading-6 text-slate-500">
               API連携なしでもCSVで月次診断を開始できます。
               実APIへの接続は Phase 3 / 4 で読み取り専用で順次追加予定です。
             </p>
@@ -1645,12 +1686,12 @@ export default function DataImport() {
                   <div className="text-xs font-semibold text-slate-800">
                     {x.l}
                   </div>
-                  <div className="text-[11px] text-slate-500">{x.s}</div>
+                  <div className="text-xs text-slate-500">{x.s}</div>
                   <button
                     type="button"
                     disabled
                     title="本MVPでは未接続。Phase 3 / 4 で読み取り専用接続を予定"
-                    className="mt-1.5 w-full cursor-not-allowed rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-400"
+                    className="mt-1.5 w-full cursor-not-allowed rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-400"
                   >
                     {x.phase} で対応
                   </button>
@@ -1793,7 +1834,7 @@ function MessageBlock({
         {icon}
         {title}
       </div>
-      <ul className="mt-1.5 space-y-0.5 text-[11px] leading-5">
+      <ul className="mt-1.5 space-y-0.5 text-xs leading-5">
         {items.map((t, i) => (
           <li key={i}>・{t}</li>
         ))}
@@ -1828,12 +1869,12 @@ function SummaryItem({
     <div className="rounded-xl border border-slate-100 bg-white p-3">
       <div className="flex items-center gap-1.5">
         <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
-        <div className="text-[11px] text-slate-500">{label}</div>
+        <div className="text-xs text-slate-500">{label}</div>
       </div>
       <div className="mt-1 text-lg font-bold tracking-tight text-slate-900">
         {value}
       </div>
-      {sub && <div className="text-[11px] text-slate-400">{sub}</div>}
+      {sub && <div className="text-xs text-slate-400">{sub}</div>}
       {progress !== undefined && (
         <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-100">
           <div

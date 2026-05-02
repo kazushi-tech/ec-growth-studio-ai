@@ -16,9 +16,20 @@ import {
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import SectionCard from "../components/ui/SectionCard";
+import {
+  ChartFrame,
+  DonutChart,
+  HorizontalBarChart,
+  chartPalette,
+} from "../components/ui/Charts";
 import Pill, { priorityTone, statusTone } from "../components/ui/Pill";
 import Sparkline from "../components/ui/Sparkline";
-import { actions, monthlyStats } from "../data/sample";
+import {
+  actionOwnerLoad,
+  actionStatusDistribution,
+  actions,
+  monthlyStats,
+} from "../data/sample";
 import type { Action } from "../data/sample";
 
 type ColumnKey = Action["status"];
@@ -99,19 +110,19 @@ export default function ActionBoard() {
                 key={s.l}
                 className="rounded-xl border border-slate-100 bg-white p-3"
               >
-                <div className="text-[11px] text-slate-500">{s.l}</div>
+                <div className="text-xs text-slate-500">{s.l}</div>
                 <div className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
                   {s.v}
                 </div>
-                <div className="mt-0.5 text-[11px] text-slate-500">{s.d}</div>
+                <div className="mt-0.5 text-xs text-slate-500">{s.d}</div>
               </div>
             ))}
             <div className="col-span-2 rounded-xl border border-slate-100 bg-white p-3 md:col-span-3 xl:col-span-1">
-              <div className="text-[11px] text-slate-500">今月の完了目標</div>
+              <div className="text-xs text-slate-500">今月の完了目標</div>
               <div className="text-2xl font-bold text-slate-900">
                 {monthlyStats.monthlyGoal.target}件
               </div>
-              <div className="mt-1 text-[11px] text-slate-500">
+              <div className="mt-1 text-xs text-slate-500">
                 進捗 {monthlyStats.monthlyGoal.current} /{" "}
                 {monthlyStats.monthlyGoal.target}件 ({monthlyStats.monthlyGoal.percent}%)
               </div>
@@ -125,6 +136,41 @@ export default function ActionBoard() {
           </div>
         </SectionCard>
 
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <ChartFrame
+            title="ステータス構成"
+            subtitle="カンバンを見る前に、滞留している状態を把握します。"
+          >
+            <DonutChart
+              ariaLabel="施策ステータス構成"
+              data={actionStatusDistribution.map((d, i) => ({
+                ...d,
+                color:
+                  i === 0
+                    ? chartPalette.sky
+                    : i === 1
+                      ? chartPalette.amber
+                      : i === 2
+                        ? chartPalette.slate
+                        : chartPalette.navy,
+              }))}
+            />
+          </ChartFrame>
+          <ChartFrame
+            title="担当別ロード"
+            subtitle="担当者ごとの負荷を横棒で揃えて確認。"
+          >
+            <HorizontalBarChart
+              ariaLabel="担当別施策ロード"
+              data={actionOwnerLoad.map((d, i) => ({
+                ...d,
+                color: i === 0 ? chartPalette.navy : chartPalette.slate,
+              }))}
+              unit="件"
+            />
+          </ChartFrame>
+        </div>
+
         {/* Operations split — owner load + review queue */}
         <div className="grid gap-5 lg:grid-cols-12">
           <SectionCard
@@ -132,7 +178,7 @@ export default function ActionBoard() {
             title="担当別ロード"
             icon={<Users size={16} />}
             action={
-              <span className="text-[11px] text-slate-500">
+              <span className="text-xs text-slate-500">
                 合計 {actions.length} 件 / P1 {p1Count} ・ P2 {p2Count}
               </span>
             }
@@ -161,7 +207,7 @@ export default function ActionBoard() {
                 );
               })}
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">
+            <p className="mt-2 text-xs text-slate-400">
               ※ 月次BPaaS伴走では、担当者あたり 5件以下を目安に配分する想定。
             </p>
           </SectionCard>
@@ -171,7 +217,7 @@ export default function ActionBoard() {
             title="レビューコメント / 確認待ち"
             icon={<MessageSquare size={16} />}
             action={
-              <span className="text-[11px] text-slate-500">
+              <span className="text-xs text-slate-500">
                 {reviewQueue.length} 件
               </span>
             }
@@ -181,12 +227,12 @@ export default function ActionBoard() {
                 <ReviewRow key={a.id} action={a} />
               ))}
               {reviewQueue.length === 0 && (
-                <p className="text-[11px] text-slate-500">
+                <p className="text-xs text-slate-500">
                   レビュー指摘はありません。
                 </p>
               )}
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">
+            <p className="mt-2 text-xs text-slate-400">
               ※ 月次定例（5/7）までに反映予定。指摘は AI考察 → 担当者レビュー × BPaaS PM コメントの3層で残す。
             </p>
           </SectionCard>
@@ -252,7 +298,7 @@ export default function ActionBoard() {
                     <span className={`h-2 w-2 rounded-full ${col.bar}`} />
                     {col.key}
                   </div>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">
+                  <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
                     {col.items.length}
                   </span>
                 </div>
@@ -260,7 +306,7 @@ export default function ActionBoard() {
                   {col.items.map((a) => (
                     <ActionCard key={a.id} action={a} />
                   ))}
-                  <button className="w-full rounded-lg border border-dashed border-slate-300 px-2 py-1.5 text-[11px] text-slate-500 hover:bg-white">
+                  <button className="w-full rounded-lg border border-dashed border-slate-300 px-2 py-1.5 text-xs text-slate-500 hover:bg-white">
                     <Plus size={11} className="mr-1 inline" /> 新規施策を追加
                   </button>
                 </div>
@@ -290,7 +336,7 @@ export default function ActionBoard() {
                   key={s.l}
                   className="rounded-xl border border-slate-100 bg-white p-3"
                 >
-                  <div className="text-[11px] text-slate-500">{s.l}</div>
+                  <div className="text-xs text-slate-500">{s.l}</div>
                   <div
                     className={`mt-1 text-xl font-bold ${
                       s.up ? "text-emerald-600" : "text-slate-900"
@@ -298,14 +344,14 @@ export default function ActionBoard() {
                   >
                     {s.v}
                   </div>
-                  <div className="text-[11px] text-slate-500">{s.sub}</div>
+                  <div className="text-xs text-slate-500">{s.sub}</div>
                 </div>
               ))}
             </div>
             <div className="mt-4 rounded-xl border border-slate-100 p-3">
               <div className="mb-2 flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-700">CVR推移 (%)</span>
-                <span className="flex items-center gap-3 text-[11px] text-slate-500">
+                <span className="flex items-center gap-3 text-xs text-slate-500">
                   <span className="flex items-center gap-1">
                     <span className="h-2 w-2 rounded-full bg-emerald-500" />
                     実装後
@@ -323,7 +369,7 @@ export default function ActionBoard() {
                 width={520}
                 height={120}
               />
-              <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+              <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
                 <span>4/1</span>
                 <span>4/15</span>
                 <span>4/30</span>
@@ -360,11 +406,11 @@ export default function ActionBoard() {
             <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs">
               <div>
                 <div className="font-semibold text-slate-800">次の改善提案</div>
-                <div className="text-[11px] text-slate-500">
+                <div className="text-xs text-slate-500">
                   レビュー導線をFV直下に追加
                 </div>
               </div>
-              <button className="btn-secondary px-2.5 py-1 text-[11px]">
+              <button className="btn-secondary px-2.5 py-1 text-xs">
                 詳細を見る
               </button>
             </div>
@@ -415,14 +461,14 @@ function ActionCard({ action: a }: { action: Action }) {
           </Pill>
         )}
       </div>
-      <div className="mt-1.5 text-[13px] font-semibold leading-snug text-slate-800">
+      <div className="mt-1.5 text-sm font-semibold leading-snug text-slate-800">
         {a.title}
       </div>
-      <div className="mt-1.5 flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+      <div className="mt-1.5 flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
         <Target size={11} />
         期待効果: {a.expected}
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-slate-100 pt-2 text-[11px] text-slate-500">
+      <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
         <div className="flex items-center gap-1">
           <User size={11} className="text-slate-400" />
           <span className="text-slate-700">{a.owner}</span>
@@ -438,7 +484,7 @@ function ActionCard({ action: a }: { action: Action }) {
           影響: <span className="text-slate-700">{a.impact}</span>
         </div>
       </div>
-      <div className="mt-1.5 space-y-1 text-[11px] text-slate-500">
+      <div className="mt-1.5 space-y-1 text-xs text-slate-500">
         <div>
           <span className="text-slate-400">AI考察:</span>{" "}
           <span className="text-slate-700">{a.rationale}</span>
@@ -453,12 +499,12 @@ function ActionCard({ action: a }: { action: Action }) {
         </div>
       </div>
       {a.reviewComment && (
-        <div className="mt-2 rounded-md border border-amber-100 bg-amber-50/70 p-2 text-[11px] text-amber-800">
+        <div className="mt-2 rounded-md border border-amber-100 bg-amber-50/70 p-2 text-xs text-amber-800">
           <div className="flex items-center gap-1 font-semibold">
             <MessageSquare size={11} />
             レビューコメント
             {a.reviewer && (
-              <span className="ml-auto text-[11px] font-normal text-amber-700/80">
+              <span className="ml-auto text-xs font-normal text-amber-700/80">
                 {a.reviewer}
                 {a.reviewedAt && ` ・ ${a.reviewedAt}`}
               </span>
@@ -481,19 +527,19 @@ function ReviewRow({ action: a }: { action: Action }) {
         <Pill tone={statusTone(a.status)} size="xs">
           {a.status}
         </Pill>
-        <span className="text-[12px] font-medium text-slate-800">{a.title}</span>
+        <span className="text-sm font-medium text-slate-800">{a.title}</span>
       </div>
       {a.reviewComment ? (
-        <p className="mt-1.5 text-[11px] leading-relaxed text-slate-700">
+        <p className="mt-1.5 text-xs leading-relaxed text-slate-700">
           <MessageSquare size={11} className="mr-1 inline text-amber-500" />
           {a.reviewComment}
         </p>
       ) : (
-        <p className="mt-1.5 text-[11px] text-slate-500">
+        <p className="mt-1.5 text-xs text-slate-500">
           レビュー指摘は未記入
         </p>
       )}
-      <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
+      <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-slate-500">
         <span className="flex items-center gap-1">
           <User size={11} className="text-slate-400" />
           {a.owner}
@@ -507,7 +553,7 @@ function ReviewRow({ action: a }: { action: Action }) {
           {a.expected}
         </span>
         {a.reviewer && (
-          <span className="ml-auto text-[11px] text-slate-400">
+          <span className="ml-auto text-xs text-slate-400">
             {a.reviewer}
             {a.reviewedAt && ` ・ ${a.reviewedAt}`}
           </span>
@@ -540,7 +586,7 @@ function Stat({
         wide ? "col-span-2" : ""
       }`}
     >
-      <div className="text-[11px] text-slate-500">{l}</div>
+      <div className="text-xs text-slate-500">{l}</div>
       <div className={`mt-0.5 text-sm font-bold ${color}`}>{v}</div>
     </div>
   );

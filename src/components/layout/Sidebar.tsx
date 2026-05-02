@@ -183,7 +183,7 @@ export function SidebarBody({ onNavigate }: Props) {
             <Crown size={14} aria-hidden="true" />
             プレミアムプラン
           </div>
-          <p className="mt-1 text-[11px] text-navy-100">
+          <p className="mt-1 text-xs text-navy-100">
             契約期間: 2026/12/31まで
           </p>
         </div>
@@ -193,7 +193,7 @@ export function SidebarBody({ onNavigate }: Props) {
           </div>
           <div className="leading-tight">
             <div className="text-sm text-white">Growth Team</div>
-            <div className="text-[11px] text-navy-200">オーナー</div>
+            <div className="text-xs text-navy-200">オーナー</div>
           </div>
         </div>
       </div>

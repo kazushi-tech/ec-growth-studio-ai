@@ -178,12 +178,12 @@ export default function PriorityMap({ actions, limit = 8 }: Props) {
           </svg>
 
           {/* 軸ラベル (HTML、a11y用に SVG とは別に明示) */}
-          <div className="pointer-events-none mt-1 flex justify-between text-[10px] text-slate-500">
+          <div className="pointer-events-none mt-1 flex justify-between text-xs text-slate-500">
             <span>← 実行しやすい（工数 低）</span>
             <span>実行しにくい（工数 高） →</span>
           </div>
           <div
-            className="pointer-events-none absolute left-[-6px] top-1/2 -translate-y-1/2 -rotate-90 text-[10px] text-slate-500"
+            className="pointer-events-none absolute left-[-6px] top-1/2 -translate-y-1/2 -rotate-90 text-xs text-slate-500"
             aria-hidden="true"
           >
             ← インパクト 高
@@ -191,9 +191,9 @@ export default function PriorityMap({ actions, limit = 8 }: Props) {
         </div>
 
         {/* 凡例 + 上位施策リスト */}
-        <div className="space-y-2 text-[11px]">
+        <div className="space-y-2 text-xs">
           <div className="rounded-lg border border-slate-200 bg-white p-2.5">
-            <div className="text-[11px] font-semibold text-slate-700">
+            <div className="text-xs font-semibold text-slate-700">
               凡例
             </div>
             <div className="mt-1.5 flex items-center gap-2">
@@ -225,7 +225,7 @@ export default function PriorityMap({ actions, limit = 8 }: Props) {
                   className="flex items-start gap-1.5 leading-4"
                 >
                   <span
-                    className={`inline-flex h-4 min-w-[1.1rem] shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-semibold ring-1 ${priorityChip[action.priority]} ${priorityRing[action.priority]}`}
+                    className={`inline-flex h-4 min-w-[1.1rem] shrink-0 items-center justify-center rounded-full px-1 text-xs font-semibold ring-1 ${priorityChip[action.priority]} ${priorityRing[action.priority]}`}
                   >
                     {action.id}
                   </span>
@@ -235,7 +235,7 @@ export default function PriorityMap({ actions, limit = 8 }: Props) {
           </ul>
           <Link
             to="/app/action-board"
-            className="inline-flex items-center gap-1 text-[11px] font-medium text-sky-700 hover:text-sky-900"
+            className="inline-flex items-center gap-1 text-xs font-medium text-sky-700 hover:text-sky-900"
           >
             施策ボードで詳細を見る →
           </Link>
