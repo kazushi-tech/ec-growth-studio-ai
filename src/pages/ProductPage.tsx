@@ -15,6 +15,7 @@ import {
   AlertOctagon,
   Target,
   ArrowRight,
+  ChevronDown,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import SectionCard from "../components/ui/SectionCard";
@@ -511,20 +512,30 @@ function CheckCol({
     rose: "text-rose-600",
   };
   return (
-    <div className="mt-2">
-      <div
-        className={`flex items-center gap-2 text-xs font-semibold ${colorMap[tone]}`}
+    <details className="group mt-2 rounded-lg border border-slate-100 bg-white px-3 py-2">
+      <summary
+        className={`flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold ${colorMap[tone]}`}
       >
-        <span className="h-1.5 w-1.5 rounded-full bg-current" />
-        {title}
-      </div>
-      <ul className="mt-1.5 space-y-0.5 pl-3.5 text-xs text-slate-600">
+        <span className="inline-flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+          {title}
+        </span>
+        <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+          {items.length}件
+          <ChevronDown
+            size={14}
+            className="transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          />
+        </span>
+      </summary>
+      <ul className="mt-2 space-y-0.5 border-t border-slate-100 pt-2 pl-3.5 text-xs text-slate-600">
         {items.map((it) => (
           <li key={it} className="list-disc">
             {it}
           </li>
         ))}
       </ul>
-    </div>
+    </details>
   );
 }
