@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Database,
@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Activity,
   BookOpen,
+  ChevronDown,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -26,6 +27,10 @@ type NavItem = {
   to: string;
   icon: LucideIcon;
   end?: boolean;
+  children?: {
+    label: string;
+    to: string;
+  }[];
 };
 
 // MVPで実装済みの7画面のみを Sidebar に出す。
@@ -35,7 +40,19 @@ type NavItem = {
 const navItems: NavItem[] = [
   { label: "ダッシュボード", to: "/app", icon: LayoutDashboard, end: true },
   { label: "売上要因分析", to: "/app/revenue-analysis", icon: Activity },
-  { label: "データ取込", to: "/app/data-import", icon: Database },
+  {
+    label: "データ取込",
+    to: "/app/data-import",
+    icon: Database,
+    children: [
+      { label: "現在の接続状態", to: "/app/data-import#data-import-current" },
+      { label: "接続準備", to: "/app/data-import#data-import-readiness" },
+      { label: "接続サマリー", to: "/app/data-import#data-import-summary" },
+      { label: "データソース一覧", to: "/app/data-import#data-import-sources" },
+      { label: "CSVアップロード", to: "/app/data-import#data-import-upload" },
+      { label: "次アクション", to: "/app/data-import#data-import-actions" },
+    ],
+  },
   { label: "AI考察レポート", to: "/app/ai-report", icon: Sparkles },
   { label: "商品ページ改善", to: "/app/product-page", icon: FileEdit },
   { label: "施策ボード", to: "/app/action-board", icon: KanbanSquare },
@@ -143,6 +160,13 @@ export default function Sidebar({ onNavigate }: Props) {
 }
 
 export function SidebarBody({ onNavigate }: Props) {
+  const location = useLocation();
+  const [openItems, setOpenItems] = useState<Record<string, boolean>>({});
+
+  const current = `${location.pathname}${location.hash}`;
+  const isPathActive = (item: NavItem) =>
+    item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
+
   return (
     <div className="flex h-full flex-col">
       <NavLink
@@ -161,20 +185,74 @@ export function SidebarBody({ onNavigate }: Props) {
       </NavLink>
 
       <nav aria-label="主要画面" className="flex-1 space-y-0.5 px-3 pt-2">
-        {navItems.map(({ label, to, icon: Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              `nav-item ${isActive ? "nav-item-active" : ""}`
-            }
-          >
-            <Icon size={17} aria-hidden="true" />
-            <span>{label}</span>
-          </NavLink>
-        ))}
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = isPathActive(item);
+          const isOpen = openItems[item.to] ?? isActive;
+          return (
+            <div key={item.to}>
+              <div
+                className={`group flex items-center rounded-md transition-colors ${
+                  isActive
+                    ? "bg-white/10 text-white"
+                    : "text-navy-200 hover:bg-navy-800/70 hover:text-white"
+                }`}
+              >
+                <NavLink
+                  to={item.to}
+                  end={item.end}
+                  onClick={onNavigate}
+                  className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-sm font-medium"
+                >
+                  <Icon size={17} aria-hidden="true" />
+                  <span className="truncate">{item.label}</span>
+                </NavLink>
+                {item.children ? (
+                  <button
+                    type="button"
+                    aria-label={`${item.label} の項目を開閉`}
+                    aria-expanded={isOpen}
+                    onClick={() =>
+                      setOpenItems((prev) => ({
+                        ...prev,
+                        [item.to]: !(prev[item.to] ?? isActive),
+                      }))
+                    }
+                    className="mr-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-navy-200 hover:bg-navy-700/70 hover:text-white"
+                  >
+                    <ChevronDown
+                      size={15}
+                      aria-hidden="true"
+                      className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                ) : null}
+              </div>
+
+              {item.children && isOpen ? (
+                <div className="mt-1 space-y-0.5 border-l border-navy-700/80 pl-3 ml-5">
+                  {item.children.map((child) => {
+                    const childActive = current === child.to;
+                    return (
+                      <Link
+                        key={child.to}
+                        to={child.to}
+                        onClick={onNavigate}
+                        className={`block rounded-md px-3 py-1.5 text-sm transition-colors ${
+                          childActive
+                            ? "bg-sky-400/15 text-sky-100"
+                            : "text-navy-200 hover:bg-navy-800/70 hover:text-white"
+                        }`}
+                      >
+                        {child.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
       </nav>
 
       <div className="space-y-3 border-t border-navy-800/80 p-4">
