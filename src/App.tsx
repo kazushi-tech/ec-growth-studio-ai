@@ -22,6 +22,7 @@ export default function App() {
         <Route path="/app/product-page" element={<ProductPage />} />
         <Route path="/app/action-board" element={<ActionBoard />} />
         <Route path="/app/data-import" element={<DataImport />} />
+        <Route path="/app/data-import/:view" element={<DataImport />} />
         <Route path="/app/monthly-report" element={<MonthlyReport />} />
         <Route path="/app/guide" element={<Guide />} />
       </Route>
